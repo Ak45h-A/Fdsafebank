@@ -1,176 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SafeBank — Customer Login</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Mulish:wght@300;400;500;600;700&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Mulish',sans-serif;min-height:100vh;display:flex;background:#f0f4ff}
+{% extends "base.html" %}
+{% block title %}Login — SafeBank{% endblock %}
+{% block nav_bar %}{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn"
+            style="position:absolute;top:16px;right:16px;">🌙</button>
 
-/* LEFT PANEL — decorative blue side */
-.left{
-  width:45%;background:linear-gradient(160deg,#1e3a8a 0%,#1d4ed8 50%,#2563eb 100%);
-  display:flex;flex-direction:column;justify-content:center;align-items:center;
-  padding:60px;position:relative;overflow:hidden;
-}
-.left::before{
-  content:'';position:absolute;top:-80px;right:-80px;
-  width:320px;height:320px;border-radius:50%;
-  background:rgba(255,255,255,.06);
-}
-.left::after{
-  content:'';position:absolute;bottom:-60px;left:-60px;
-  width:240px;height:240px;border-radius:50%;
-  background:rgba(255,255,255,.04);
-}
-.left-content{position:relative;z-index:1;text-align:center;color:#fff}
-.bank-icon{font-size:64px;margin-bottom:20px;filter:drop-shadow(0 8px 24px rgba(0,0,0,.3))}
-.bank-name{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;margin-bottom:8px;letter-spacing:-1px}
-.bank-tagline{font-size:15px;opacity:.75;margin-bottom:48px;font-weight:300}
-.features{text-align:left;width:100%}
-.feature{display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:14px 18px;background:rgba(255,255,255,.08);border-radius:12px;border:1px solid rgba(255,255,255,.1)}
-.feature-icon{font-size:22px;flex-shrink:0}
-.feature-text{font-size:13px;opacity:.9;line-height:1.5}
-.feature-title{font-weight:700;margin-bottom:2px}
-
-/* RIGHT PANEL — login form */
-.right{
-  width:55%;display:flex;align-items:center;justify-content:center;
-  padding:60px 80px;background:#fff;
-}
-.form-box{width:100%;max-width:400px}
-.form-header{margin-bottom:36px}
-.welcome-back{font-size:13px;color:#6366f1;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px}
-.form-title{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:#0f172a;line-height:1.2}
-.form-subtitle{font-size:14px;color:#64748b;margin-top:8px}
-
-.flash{padding:12px 16px;border-radius:10px;margin-bottom:20px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
-.flash-error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626}
-.flash-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a}
-.flash-warning{background:#fffbeb;border:1px solid #fde68a;color:#d97706}
-
-.form-group{margin-bottom:20px}
-label{display:block;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
-input{width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;color:#0f172a;border-radius:10px;padding:13px 16px;font-size:14px;font-family:inherit;outline:none;transition:.2s}
-input:focus{border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-input::placeholder{color:#94a3b8}
-
-.btn-login{
-  width:100%;padding:14px;background:linear-gradient(135deg,#1d4ed8,#2563eb);
-  color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;
-  font-family:inherit;cursor:pointer;transition:.2s;margin-top:4px;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-}
-.btn-login:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(37,99,235,.35)}
-.btn-login:active{transform:translateY(0)}
-
-.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:#94a3b8;font-size:13px}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:#e2e8f0}
-
-.register-link{text-align:center;font-size:13px;color:#64748b}
-.register-link a{color:#2563eb;font-weight:700;text-decoration:none}
-.register-link a:hover{text-decoration:underline}
-
-.admin-link{
-  margin-top:32px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;
-  border-radius:10px;text-align:center;
-}
-.admin-link p{font-size:12px;color:#94a3b8}
-.admin-link a{color:#64748b;font-weight:700;font-size:12px;text-decoration:none}
-.admin-link a:hover{color:#1e3a8a}
-
-@media(max-width:768px){
-  body{flex-direction:column}
-  .left{width:100%;padding:40px 24px;min-height:auto}
-  .features{display:none}
-  .right{width:100%;padding:40px 24px}
-}
-</style>
-</head>
-<body>
-
-<!-- LEFT: Branding Panel -->
-<div class="left">
-  <div class="left-content">
-    <div class="bank-icon">🏦</div>
-    <div class="bank-name">SafeBank</div>
-    <div class="bank-tagline">Your money, protected by AI</div>
-
-    <div class="features">
-      <div class="feature">
-        <div class="feature-icon">🛡️</div>
-        <div class="feature-text">
-          <div class="feature-title">AI Fraud Detection</div>
-          Every transaction scored in real-time
-        </div>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">⚡</div>
-        <div class="feature-text">
-          <div class="feature-title">Instant Refunds</div>
-          Report fraud and get money back fast
-        </div>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">🔒</div>
-        <div class="feature-text">
-          <div class="feature-title">Secure & Encrypted</div>
-          Your data is always safe with us
-        </div>
+    <div class="auth-logo">
+      <div class="auth-logo-mark">A</div>
+      <div>
+        <div style="font-weight:900;font-size:20px;color:var(--text);">SafeBank</div>
+        <div style="font-size:11px;color:var(--text3);">Customer Portal</div>
       </div>
     </div>
-  </div>
-</div>
+    <div class="auth-title">Welcome back</div>
+    <div class="auth-sub">Sign in to your account</div>
 
-<!-- RIGHT: Login Form -->
-<div class="right">
-  <div class="form-box">
-    <div class="form-header">
-      <p class="welcome-back">👋 Welcome Back</p>
-      <h1 class="form-title">Sign in to your account</h1>
-      <p class="form-subtitle">Enter your email and password to access your SafeBank account.</p>
-    </div>
-
-    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-    <div class="flash flash-{{ category }}">
-      {{ '✅' if category=='success' else ('❌' if category=='error' else '⚠️') }}
-      {{ message }}
-    </div>
-    {% endfor %}
-    {% endwith %}
+    {% if messages %}<div class="alerts">
+      {% for cat,msg in messages %}
+      <div class="alert alert-{{ 'error' if cat=='error' else ('success' if cat=='success' else 'info') }}">{{ msg }}</div>
+      {% endfor %}
+    </div>{% endif %}{% endwith %}
 
-    <form method="POST" action="/login">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" name="email" placeholder="you@example.com" required autofocus>
+        <label class="form-label">Email address</label>
+        <input type="email" name="email" class="form-input" placeholder="you@example.com" required autofocus/>
       </div>
       <div class="form-group">
-        <label>Password</label>
-        <input type="password" name="password" placeholder="Enter your password" required>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <label class="form-label" style="margin:0;">Password</label>
+          <a href="/forgot-password" style="font-size:12px;color:var(--brand);font-weight:600;">Forgot?</a>
+        </div>
+        <div class="pw-wrap">
+          <input type="password" name="password" class="form-input" placeholder="••••••••" required/>
+          <button type="button" class="pw-eye" onclick="togglePw(this)">👁</button>
+        </div>
       </div>
-      <button type="submit" class="btn-login">
-        Sign In → 
+      <button type="submit" class="btn btn-primary btn-full" style="margin-top:6px;padding:14px;">
+        Sign In
       </button>
     </form>
 
-    <div class="divider">or</div>
-
-    <div class="register-link">
-      Don't have an account? <a href="/register">Create one free →</a>
+    <div style="text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+      <span style="font-size:14px;color:var(--text3);">New to SafeBank?</span>
+      <a href="/register" style="font-size:14px;font-weight:700;color:var(--brand);margin-left:6px;">Create account →</a>
     </div>
-
-    <!-- Subtle link to admin portal — not prominent on purpose -->
-    <div class="admin-link">
-      <p>Are you a bank employee?</p>
-      <a href="/admin/login">Access Admin Portal →</a>
+    <div style="text-align:center;margin-top:10px;">
+      <a href="/admin/login" style="font-size:11px;color:var(--text3);">Admin portal</a>
     </div>
-
   </div>
 </div>
-
-</body>
-</html>
+<script>
+(function(){
+  const s=localStorage.getItem('sb-user-theme')||'light';
+  document.documentElement.setAttribute('data-theme',s);
+  document.getElementById('theme-btn').textContent=s==='dark'?'☀️':'🌙';
+})();
+</script>
+{% endblock %}

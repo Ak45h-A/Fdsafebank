@@ -1,76 +1,90 @@
 {% extends "base.html" %}
-{% block title %}Make Payment{% endblock %}
-{% block content %}
-<div style="max-width:520px;margin:0 auto">
-<h1 class="page-title">💳 Make a Payment</h1>
+{% block title %}Pay — SafeBank{% endblock %}
+{% block nav_links %}
+<div class="nav-links">
+  <a href="/dashboard" class="nav-link">Home</a>
+  <a href="/transactions" class="nav-link">Transactions</a>
+  <a href="/pay" class="nav-link active">Pay</a>
+  <a href="/deposit" class="nav-link">Deposit</a>
+  <a href="/my-reports" class="nav-link">My Reports</a>
+</div>
+{% endblock %}
+{% block nav_right %}
+<div class="nav-avatar">{{ acc.full_name[0].upper() }}</div>
+<a href="/logout" class="nav-link" style="color:var(--text3);font-size:13px;">Out</a>
+{% endblock %}
 
-{% if result %}
-  {% if result.blocked %}
-  <div class="card mb-4" style="border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.05)">
-    <h3 style="color:var(--red);font-size:16px;margin-bottom:12px">🚫 Transaction BLOCKED</h3>
-    <p style="font-size:14px;color:var(--subtle);margin-bottom:12px">{{ result.error }}</p>
-    <p style="font-size:13px;color:var(--muted)">Fraud Score: <strong style="color:var(--red)">{{ result.fraud_score }}/100</strong></p>
-    {% if result.reasons %}
-    <ul style="margin-top:8px;padding-left:20px">
-      {% for r in result.reasons %}<li style="font-size:13px;color:var(--subtle);margin-top:4px">{{ r }}</li>{% endfor %}
-    </ul>
-    {% endif %}
-    <p style="font-size:13px;color:var(--green);margin-top:12px">✅ Your money was <strong>NOT deducted</strong>.</p>
-  </div>
-  {% elif result.success %}
-  <div class="card mb-4" style="border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.05)">
-    <h3 style="color:var(--green);font-size:16px;margin-bottom:12px">✅ Payment Successful</h3>
-    <p style="font-size:14px;margin-bottom:8px">₹{{ "{:,.2f}".format(result.amount) }} paid to <strong>{{ form.merchant }}</strong></p>
-    <p style="font-size:13px;color:var(--muted)">TXN ID: <span class="txn-id">{{ result.txn_id }}</span></p>
-    <p style="font-size:13px;color:var(--muted)">New Balance: <strong style="color:var(--blue3)">₹{{ "{:,.2f}".format(result.new_balance) }}</strong></p>
-    {% if result.flagged %}
-    <div style="margin-top:12px;padding:10px;background:rgba(245,158,11,.08);border-radius:8px;border:1px solid rgba(245,158,11,.2)">
-      <p style="font-size:13px;color:var(--yellow)">⚠️ This transaction was flagged as suspicious (Score: {{ result.fraud_score }}/100).</p>
-      <p style="font-size:12px;color:var(--muted);margin-top:4px">If this wasn't you, <a href="/report-fraud?txn_id={{ result.txn_id }}">report it for a refund →</a></p>
+{% block body %}
+<div class="page-md">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+    <a href="/dashboard" class="back-btn">← Back</a>
+    <div>
+      <div style="font-size:22px;font-weight:800;">Make a Payment</div>
+      <div style="font-size:13px;color:var(--text3);">Send money instantly</div>
     </div>
+  </div>
+
+  <div class="balance-card mb-3" style="padding:20px 24px;">
+    <div class="balance-label">Available Balance</div>
+    <div style="font-size:28px;font-weight:800;color:#fff;">₹{{ "%.2f"|format(acc.balance) }}</div>
+  </div>
+
+  {% if result %}
+    {% if result.success %}
+    <div class="card mb-3" style="border-color:var(--success);">
+      <div style="font-weight:700;color:var(--success);font-size:16px;margin-bottom:6px;">✅ Payment Successful</div>
+      <div style="font-size:14px;color:var(--text2);">
+        ₹{{ "%.2f"|format(result.amount) }} sent to <strong>{{ form.merchant }}</strong><br/>
+        New balance: <strong>₹{{ "%.2f"|format(result.new_balance) }}</strong>
+      </div>
+      {% if result.flagged %}
+      <div style="margin-top:8px;font-size:13px;color:var(--warn);">⚠️ Flagged (score: {{ result.fraud_score }})</div>
+      {% endif %}
+    </div>
+    <script>window.addEventListener('DOMContentLoaded',function(){ showGtaOverlay('/dashboard'); });</script>
+
+    {% elif result.blocked %}
+    <div class="alert alert-error mb-3">
+      <div>
+        <div style="font-weight:700;margin-bottom:4px;">Transaction Blocked 🚫</div>
+        <div>{{ result.error }}</div>
+        {% if result.reasons %}
+        <div style="margin-top:8px;">{% for r in result.reasons %}<div style="font-size:12px;margin-top:2px;">• {{ r }}</div>{% endfor %}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-error mb-3">{{ result.error }}</div>
     {% endif %}
-  </div>
-  {% else %}
-  <div class="card mb-4" style="border-color:rgba(239,68,68,.3)">
-    <p style="color:var(--red)">❌ {{ result.error }}</p>
-  </div>
   {% endif %}
-{% endif %}
 
-<div class="card">
-  <form method="POST">
-    <div class="form-group">
-      <label>Amount (₹)</label>
-      <input type="number" name="amount" placeholder="e.g. 1500" min="1" step="0.01" required
-             value="{{ form.amount if form else '' }}">
-    </div>
-    <div class="form-group">
-      <label>Merchant / Payee</label>
-      <input type="text" name="merchant" placeholder="e.g. Amazon, Zomato, Crypto Exchange..."
-             value="{{ form.merchant if form else '' }}" required>
-    </div>
-    <div class="form-group">
-      <label>Location</label>
-      <select name="location">
-        {% for loc in ['India','Bangalore','Mumbai','Delhi','Chennai','Hyderabad','Mysuru','Kolkata','Unknown','Anonymous VPN','TOR Node','Foreign Server'] %}
-        <option value="{{ loc }}" {{ 'selected' if form and form.location==loc }}>{{ loc }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Description (optional)</label>
-      <input type="text" name="description" placeholder="What's this payment for?"
-             value="{{ form.description if form else '' }}">
-    </div>
-    <button type="submit" class="btn btn-primary btn-full">Send Payment →</button>
-  </form>
-</div>
-
-<div class="card-sm mt-4" style="border-color:rgba(37,99,235,.2)">
-  <p style="font-size:12px;color:var(--muted);line-height:1.7">
-    💡 <strong style="color:var(--blue3)">Test fraud detection:</strong><br>
-    Try Merchant = <code style="color:var(--text)">Crypto Exchange</code> + Location = <code style="color:var(--text)">Anonymous VPN</code> with a large amount to see the fraud blocker in action.
-  </p>
-</div>
+  <div class="card">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="form-group">
+        <label class="form-label">Merchant / Recipient</label>
+        <input type="text" name="merchant" class="form-input" placeholder="Amazon, Swiggy, etc."
+               value="{{ form.merchant if form else '' }}" required/>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Amount (₹)</label>
+          <input type="number" name="amount" class="form-input" placeholder="0.00"
+                 step="0.01" min="1" value="{{ form.amount if form else '' }}" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input type="text" name="location" class="form-input" placeholder="India"
+                 value="{{ form.location if form else 'India' }}"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description (optional)</label>
+        <input type="text" name="description" class="form-input" placeholder="What's this for?"
+               value="{{ form.description if form else '' }}"/>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Send Payment 💸</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

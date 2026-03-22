@@ -1,0 +1,410 @@
+{% extends "admin_base.html" %}
+{% block title %}Verifications — SafeBank Admin{% endblock %}
+
+{% block admin_content %}
+
+<style>
+/* ── Card border per status ── */
+.vcard-pending   { border-left: 3px solid var(--amber); }
+.vcard-doc       { border-left: 3px solid #a78bfa; }
+.vcard-video     { border-left: 3px solid #3b82f6; }
+.vcard-approved  { border-left: 3px solid var(--green); }
+.vcard-rejected  { border-left: 3px solid var(--red); }
+.vcard-auto      { border-left: 3px solid #f97316; }
+
+/* ── Status chips ── */
+.chip { display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em; }
+.chip-pending  { background:var(--amber-lt);  color:var(--amber); }
+.chip-doc      { background:#1e1440;           color:#a78bfa; }
+.chip-video    { background:#1e3a5f;           color:#60a5fa; }
+.chip-auto     { background:#2d1000;           color:#fb923c; }
+
+/* ── Document section ── */
+.doc-section              { margin:0 20px 16px; border-radius:12px; overflow:hidden; }
+.doc-section.s-pending    { border:1.5px solid var(--amber); }
+.doc-section.s-doc        { border:1.5px solid #a78bfa; }
+.doc-section.s-video      { border:1.5px solid #3b82f6; }
+.doc-section.s-approved   { border:1.5px solid var(--green); }
+.doc-section.s-rejected   { border:1.5px solid var(--red); }
+.doc-section.s-auto       { border:1.5px solid #f97316; }
+
+.doc-header               { padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700; }
+.doc-header.s-pending     { background:var(--amber-lt);  color:var(--amber); }
+.doc-header.s-doc         { background:#1e1440;           color:#a78bfa; }
+.doc-header.s-video       { background:#1e3a5f;           color:#60a5fa; }
+.doc-header.s-approved    { background:var(--green-lt);   color:var(--green); }
+.doc-header.s-rejected    { background:var(--red-lt);     color:var(--red); }
+.doc-header.s-auto        { background:#2d1000;           color:#fb923c; }
+
+.doc-icon-wrap            { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.doc-icon-wrap.s-pending  { background:var(--amber-lt);  color:var(--amber); }
+.doc-icon-wrap.s-doc      { background:#1e1440;           color:#a78bfa; }
+.doc-icon-wrap.s-video    { background:#1e3a5f;           color:#60a5fa; }
+.doc-icon-wrap.s-approved { background:var(--green-lt);   color:var(--green); }
+.doc-icon-wrap.s-rejected { background:var(--red-lt);     color:var(--red); }
+.doc-icon-wrap.s-auto     { background:#2d1000;           color:#fb923c; }
+.doc-icon-wrap svg        { stroke:currentColor; }
+
+.doc-type-pill            { font-size:11px; padding:2px 8px; border-radius:4px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+.doc-type-pill.s-pending  { background:var(--amber-lt);  color:var(--amber); }
+.doc-type-pill.s-doc      { background:#1e1440;           color:#a78bfa; }
+.doc-type-pill.s-video    { background:#1e3a5f;           color:#60a5fa; }
+.doc-type-pill.s-approved { background:var(--green-lt);   color:var(--green); }
+.doc-type-pill.s-rejected { background:var(--red-lt);     color:var(--red); }
+.doc-type-pill.s-auto     { background:#2d1000;           color:#fb923c; }
+
+/* ── Resolved banners ── */
+.resolved-banner           { margin:0 20px 20px; padding:14px 16px; border-radius:10px; }
+.resolved-banner.s-approved{ background:var(--green-lt); border:1px solid var(--green); color:var(--green); }
+.resolved-banner.s-rejected{ background:var(--red-lt);   border:1px solid var(--red);   color:var(--red); }
+.resolved-banner.s-auto    { background:#2d1000;          border:1px solid #f97316;      color:#fb923c; }
+
+/* ── Decision box ── */
+.decision-box { margin:0 20px 20px; background:var(--surface3); border:1px solid var(--border2); border-radius:12px; padding:18px; }
+
+/* ── Auto-sent / fallback link banners ── */
+.link-sent    { margin:0 20px 16px; padding:12px 16px; background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.25); border-radius:10px; }
+.link-fallback{ margin:0 20px 16px; padding:12px 16px; background:rgba(37,99,235,.08);  border:1px solid rgba(37,99,235,.2);  border-radius:10px; }
+</style>
+
+<div class="page-header">
+  <div class="page-title">Identity Verifications</div>
+  <div class="page-sub">Receivers must prove identity within 1 hour or a refund is auto-processed</div>
+</div>
+
+{% if verifications %}
+{% for v in verifications %}
+
+{# ── Single status key used for all CSS class suffixes ── #}
+{% if v.status == 'document_uploaded' %}{% set sk = 'doc' %}
+{% elif v.status == 'video_requested' %}{% set sk = 'video' %}
+{% elif v.status == 'approved' %}{% set sk = 'approved' %}
+{% elif v.status == 'rejected' %}{% set sk = 'rejected' %}
+{% elif v.status == 'auto_refunded' %}{% set sk = 'auto' %}
+{% else %}{% set sk = 'pending' %}{% endif %}
+
+{# ── Detect whether merchant field looks like a valid email ── #}
+{% set receiver_is_email = '@' in v.merchant and '.' in v.merchant %}
+
+<div class="card mb-3 vcard-{{ sk }}" style="padding:0;overflow:hidden;">
+
+  <!-- ── HEADER ── -->
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+
+      {% if sk == 'pending' %}
+      <span class="chip chip-pending">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Awaiting Response
+      </span>
+      {% elif sk == 'doc' %}
+      <span class="chip chip-doc">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Document Submitted
+      </span>
+      {% elif sk == 'video' %}
+      <span class="chip chip-video">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        Video Call Requested
+      </span>
+      {% elif sk == 'approved' %}
+      <span class="badge badge-success">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
+        Receiver Cleared
+      </span>
+      {% elif sk == 'rejected' %}
+      <span class="badge badge-danger">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Refunded — Fraud
+      </span>
+      {% elif sk == 'auto' %}
+      <span class="chip chip-auto">⚡ Auto-Refunded</span>
+      {% endif %}
+
+      <span class="font-mono text-xs">{{ v.verification_id }}</span>
+    </div>
+    <span class="text-xs">Created: {{ v.created_at[:16] }}</span>
+  </div>
+
+  <!-- ── INFO GRID ── -->
+  <div style="padding:18px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+
+    <!-- Reporter -->
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Reporter
+      </div>
+      <div style="font-weight:700;font-size:15px;">{{ v.reporter_name }}</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:3px;">{{ v.reporter_email }}</div>
+    </div>
+
+    <!-- Receiver -->
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Receiver
+      </div>
+      <div style="font-weight:700;font-size:15px;color:var(--amber);">{{ v.merchant }}</div>
+      <div style="font-size:22px;font-weight:800;color:var(--red);margin-top:4px;">₹{{ "{:,.2f}".format(v.amount) }}</div>
+    </div>
+
+    <!-- Deadline -->
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Deadline
+      </div>
+      <div class="countdown ok" data-deadline="{{ v.deadline_at }}">{{ v.deadline_at[:16] }}</div>
+      <div class="font-mono text-xs" style="margin-top:5px;">{{ v.txn_id }}</div>
+    </div>
+
+  </div>
+
+  <!-- ── VERIFICATION LINK SECTION ── -->
+  {% if v.status in ('pending', 'document_uploaded', 'video_requested') %}
+
+  {% if receiver_is_email %}
+  <!-- Auto-sent via email -->
+  <div class="link-sent">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:34px;height:34px;background:rgba(16,185,129,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--green);">Verification link auto-sent</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;">Sent to <strong style="color:var(--text);">{{ v.merchant }}</strong> when this verification was created</div>
+        </div>
+      </div>
+      <!-- Resend / copy as fallback -->
+      <button class="btn btn-ghost btn-sm js-copy-btn" data-copy="{{ request.host_url }}verify/{{ v.verification_id }}" title="Copy link if you need to resend manually">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy Link
+      </button>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Receiver has no email — show manual fallback -->
+  <div class="link-fallback">
+    <div style="font-size:12px;color:#60a5fa;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Could not auto-send — no email on record for this receiver
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Copy this link and send it manually via SMS, WhatsApp, or any channel:</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:12px;color:var(--text);background:var(--surface3);padding:8px 12px;border-radius:8px;flex:1;word-break:break-all;font-family:var(--font-mono);">{{ request.host_url }}verify/{{ v.verification_id }}</span>
+      <button class="btn btn-ghost btn-sm js-copy-btn" data-copy="{{ request.host_url }}verify/{{ v.verification_id }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════
+       DOCUMENT SECTION — ADMIN REVIEWS THE FILE
+       ══════════════════════════════════════════ -->
+  {% if v.document_name %}
+  <div class="doc-section s-{{ sk }}">
+
+    <div class="doc-header s-{{ sk }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Submitted Identity Document
+    </div>
+
+    <div style="padding:16px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="doc-icon-wrap s-{{ sk }}">
+          {% if v.document_name.endswith('.pdf') %}
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+          {% elif v.document_name.rsplit('.',1)[-1].lower() in ('jpg','jpeg','png','gif','webp','bmp') %}
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          {% else %}
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {% endif %}
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:var(--text);">{{ v.document_name }}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:3px;">
+            {% if v.document_type %}
+            <span class="doc-type-pill s-{{ sk }}">{{ v.document_type }}</span>
+            {% endif %}
+            <span style="font-size:12px;color:var(--text3);">Submitted by receiver</span>
+          </div>
+        </div>
+      </div>
+
+      {% if v.document_path %}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/admin/view-document/{{ v.verification_id }}" target="_blank" class="btn btn-primary btn-sm">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          View Document
+        </a>
+        <a href="/admin/view-document/{{ v.verification_id }}" download class="btn btn-ghost btn-sm">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Download
+        </a>
+      </div>
+      {% else %}
+      <span style="font-size:13px;color:var(--text3);display:flex;align-items:center;gap:5px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Document number entered — no file uploaded
+      </span>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endif %}
+
+  <!-- ── VIDEO CALL ── -->
+  {% if v.video_requested %}
+  <div style="margin:0 20px 16px;padding:14px 16px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;">
+    <div style="font-size:14px;color:#60a5fa;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:7px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      Video Call Requested
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:10px;">The receiver has requested a live video verification. Join the meeting:</div>
+    <a href="https://meet.jit.si/SafeBank-Verify-{{ v.verification_id[:8] }}" target="_blank" class="btn btn-primary btn-sm">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      Join Video Call
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- ── RESOLVED BANNERS ── -->
+  {% if sk == 'approved' %}
+  <div class="resolved-banner s-approved">
+    <div style="font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Receiver Verified &amp; Cleared
+    </div>
+    {% if v.admin_notes %}<div style="font-size:13px;color:var(--text2);margin-top:4px;">{{ v.admin_notes }}</div>{% endif %}
+    {% if v.resolved_at %}<div style="font-size:12px;opacity:.7;margin-top:4px;">Resolved: {{ v.resolved_at[:16] }}</div>{% endif %}
+  </div>
+
+  {% elif sk == 'rejected' %}
+  <div class="resolved-banner s-rejected">
+    <div style="font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Refunded — Transaction Confirmed Fraudulent
+    </div>
+    {% if v.admin_notes %}<div style="font-size:13px;color:var(--text2);margin-top:4px;">{{ v.admin_notes }}</div>{% endif %}
+    {% if v.resolved_at %}<div style="font-size:12px;opacity:.7;margin-top:4px;">Resolved: {{ v.resolved_at[:16] }}</div>{% endif %}
+  </div>
+
+  {% elif sk == 'auto' %}
+  <div class="resolved-banner s-auto">
+    <div style="font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Auto-Refunded — Deadline Expired
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin-top:4px;">Receiver did not respond within 1 hour. Refund automatically processed.</div>
+    {% if v.resolved_at %}<div style="font-size:12px;opacity:.7;margin-top:4px;">Resolved: {{ v.resolved_at[:16] }}</div>{% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── ADMIN DECISION ── -->
+  {% if v.status in ('pending', 'document_uploaded', 'video_requested') %}
+  <div class="decision-box">
+    <div style="font-weight:700;font-size:15px;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-dk)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Review &amp; Decision
+    </div>
+
+    {% if sk == 'doc' and not v.document_path %}
+    <div style="margin-bottom:14px;padding:10px 14px;background:var(--amber-lt);border-radius:8px;font-size:13px;color:var(--amber);display:flex;align-items:center;gap:7px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Receiver entered a document number only — no file was uploaded.
+    </div>
+    {% endif %}
+
+    {% if sk == 'doc' and v.document_path %}
+    <div style="margin-bottom:14px;padding:10px 14px;background:var(--brand-lt);border-radius:8px;font-size:13px;color:var(--brand-dk);display:flex;align-items:center;gap:7px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Open <strong>"View Document"</strong> above to review the submitted file before deciding.
+    </div>
+    {% endif %}
+
+    <div class="grid-2">
+
+      <form method="POST" action="/admin/verify/{{ v.verification_id }}"
+            onsubmit="return confirm('Issue a refund? The disputed amount will be returned to the reporter.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="action" value="refund"/>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Rejection Note</label>
+          <input type="text" name="admin_notes" class="form-input"
+                 value="Receiver failed to provide valid identity. Refund processed."/>
+        </div>
+        <button type="submit" class="btn btn-danger btn-full">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Refund Reporter — Fraud Confirmed
+        </button>
+      </form>
+
+      <form method="POST" action="/admin/verify/{{ v.verification_id }}"
+            onsubmit="return confirm('Clear receiver? The fraud report will be dismissed.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="action" value="clear"/>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Clearance Note</label>
+          <input type="text" name="admin_notes" class="form-input"
+                 value="Receiver provided valid identity. Transaction is legitimate."/>
+        </div>
+        <button type="submit" class="btn btn-green btn-full">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Clear Receiver — Transaction Legitimate
+        </button>
+      </form>
+
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card" style="text-align:center;padding:52px;">
+  <div style="width:60px;height:60px;background:var(--green-lt);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <div style="font-weight:700;font-size:17px;margin-bottom:6px;">No verifications found</div>
+  <div style="color:var(--text3);font-size:14px;">All clear — no pending identity checks.</div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.countdown').forEach(function(el){
+  var raw = el.dataset.deadline;
+  if(!raw) return;
+  var deadline = new Date(raw.replace(' ','T'));
+  function tick(){
+    var diff = deadline - Date.now();
+    if(diff <= 0){ el.textContent='EXPIRED'; el.className='countdown urgent'; return; }
+    var m = Math.floor(diff/60000), s = Math.floor((diff%60000)/1000);
+    el.textContent = m+'m '+s+'s remaining';
+    el.className = 'countdown '+(diff<300000?'urgent':(diff<600000?'warning':'ok'));
+    setTimeout(tick,1000);
+  }
+  tick();
+});
+
+document.querySelectorAll('.js-copy-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    navigator.clipboard.writeText(btn.dataset.copy).then(function(){
+      var orig = btn.innerHTML;
+      btn.textContent = 'Copied!';
+      setTimeout(function(){ btn.innerHTML = orig; }, 1500);
+    });
+  });
+});
+</script>
+{% endblock %}

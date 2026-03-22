@@ -1,17 +1,55 @@
 {% extends "base.html" %}
-{% block title %}Deposit{% endblock %}
-{% block content %}
-<div style="max-width:440px;margin:0 auto">
-<h1 class="page-title">💵 Deposit Money</h1>
-<div class="card">
-  <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Current Balance: <strong style="color:var(--blue3)">₹{{ "{:,.2f}".format(acc.balance) }}</strong></p>
-  <form method="POST">
-    <div class="form-group">
-      <label>Amount to Deposit (₹)</label>
-      <input type="number" name="amount" placeholder="e.g. 10000" min="1" step="0.01" required autofocus>
-    </div>
-    <button type="submit" class="btn btn-success btn-full">💵 Deposit Now</button>
-  </form>
+{% block title %}Deposit — SafeBank{% endblock %}
+{% block nav_links %}
+<div class="nav-links">
+  <a href="/dashboard" class="nav-link">Home</a>
+  <a href="/transactions" class="nav-link">Transactions</a>
+  <a href="/pay" class="nav-link">Pay</a>
+  <a href="/deposit" class="nav-link active">Deposit</a>
+  <a href="/my-reports" class="nav-link">My Reports</a>
 </div>
+{% endblock %}
+{% block nav_right %}
+<div class="nav-avatar">{{ acc.full_name[0].upper() }}</div>
+<a href="/logout" class="nav-link" style="color:var(--text3);font-size:13px;">Out</a>
+{% endblock %}
+{% block body %}
+<div class="page-md">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+    <a href="/dashboard" class="back-btn">← Back</a>
+    <div>
+      <div style="font-size:22px;font-weight:800;">Deposit Money</div>
+      <div style="font-size:13px;color:var(--text3);">Add funds to your account</div>
+    </div>
+  </div>
+
+  <div class="balance-card mb-3" style="padding:20px 24px;">
+    <div class="balance-label">Current Balance</div>
+    <div style="font-size:28px;font-weight:800;color:#fff;">₹{{ "%.2f"|format(acc.balance) }}</div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}<div class="alerts mb-3">
+    {% for cat,msg in messages %}
+    <div class="alert alert-{{ 'error' if cat=='error' else 'success' }}">{{ msg }}</div>
+    {% endfor %}
+  </div>{% endif %}{% endwith %}
+
+  <div class="card">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="form-group">
+        <label class="form-label">Amount to deposit (₹)</label>
+        <input type="number" name="amount" class="form-input" placeholder="1000" step="0.01" min="1" required autofocus id="dep-amount"/>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+        {% for amt in [500, 1000, 2000, 5000, 10000] %}
+        <button type="button" class="btn btn-ghost btn-sm"
+                onclick="document.getElementById('dep-amount').value={{ amt }}">₹{{ amt }}</button>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">💰 Deposit Now</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

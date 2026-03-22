@@ -1,128 +1,166 @@
-{% extends "base.html" %}
-{% block title %}Admin — Fraud Reports{% endblock %}
-{% block content %}
+{% extends "admin_base.html" %}
+{% block title %}Fraud Reports — SafeBank Admin{% endblock %}
 
-<div class="flex-between mb-4">
-  <h1 class="page-title" style="margin-bottom:0">🚨 Fraud Reports</h1>
-  <div class="flex gap-2">
-    <a href="?status=pending" class="btn btn-sm {{ 'btn-primary' if current_status=='pending' else 'btn-ghost' }}">Pending</a>
-    <a href="?status=approved" class="btn btn-sm {{ 'btn-success' if current_status=='approved' else 'btn-ghost' }}">Approved</a>
-    <a href="?status=rejected" class="btn btn-sm {{ 'btn-danger' if current_status=='rejected' else 'btn-ghost' }}">Rejected</a>
-    <a href="?status=all" class="btn btn-sm {{ 'btn-primary' if current_status=='all' else 'btn-ghost' }}">All</a>
+{% block admin_content %}
+<div class="flex justify-between items-center mb-3">
+  <div>
+    <div style="font-size:22px;font-weight:800;">Fraud Reports</div>
+    <div style="font-size:13px;color:var(--text3);">{{ reports|length }} report(s) · {{ current_status.replace('_',' ').title() }}</div>
   </div>
+  <a href="/admin/export-reports" class="btn btn-ghost btn-sm">⬇️ Export CSV</a>
+</div>
+
+<!-- How the flow works -->
+<div class="card card-sm mb-3" style="background:var(--accent-lt);border-color:var(--accent);">
+  <div style="font-size:13px;color:var(--accent);line-height:1.7;">
+    <strong>Verification Flow:</strong>
+    User reports fraud →
+    <strong>Admin clicks "Send for Verification"</strong> →
+    Receiver gets 1 hour to prove identity (notified every 15 min) →
+    Admin reviews proof in <a href="/admin/verifications" style="color:var(--accent);font-weight:700;">Verifications</a> →
+    Refund or clear.
+  </div>
+</div>
+
+<!-- Status tabs -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+  {% for s,label in [('pending','⏳ Pending'),('verification_pending','🔍 In Verification'),('approved','✅ Refunded'),('rejected','❌ Rejected'),('all','All')] %}
+  <a href="/admin/reports?status={{ s }}"
+     class="btn btn-sm {{ 'btn-primary' if current_status==s else 'btn-ghost' }}">
+    {{ label }}
+  </a>
+  {% endfor %}
 </div>
 
 {% if reports %}
-{% for r in reports %}
-<div class="card mb-4" style="border-left:4px solid {{ '#f59e0b' if r.status=='pending' else ('#10b981' if r.status=='approved' else '#ef4444') }}">
+<div class="tbl-wrap">
+  <table>
+    <thead><tr>
+      <th>Reporter</th>
+      <th>Merchant</th>
+      <th>Amount</th>
+      <th>Reason</th>
+      <th>Fraud Score</th>
+      <th>Status</th>
+      {% if current_status == 'verification_pending' %}<th>Time Left</th>{% endif %}
+      <th>Date</th>
+      <th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for r in reports %}
+    <tr>
+      <td>
+        <div style="font-weight:600;">{{ r.full_name }}</div>
+        <div style="font-size:12px;color:var(--text3);">{{ r.email }}</div>
+      </td>
+      <td style="font-weight:500;">{{ r.merchant }}</td>
+      <td style="font-weight:700;">₹{{ "%.2f"|format(r.amount) }}</td>
+      <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;">{{ r.reason }}</td>
+      <td>
+        <span class="badge {{ 'badge-danger' if r.fraud_score>=75 else ('badge-warn' if r.fraud_score>=50 else ('badge-info' if r.fraud_score>=25 else 'badge-gray')) }}">
+          {{ r.fraud_score }}
+        </span>
+      </td>
+      <td>
+        <span class="badge {{ 'badge-warn' if r.status=='pending' else ('badge-success' if r.status=='approved' else ('badge-info' if r.status=='verification_pending' else 'badge-danger')) }}">
+          {{ r.status.replace('_',' ') }}
+        </span>
+      </td>
 
-  <!-- HEADER -->
-  <div class="flex-between mb-4">
-    <div class="flex gap-3">
-      {% if r.status=='pending' %}<span class="badge badge-yellow">🕐 PENDING</span>
-      {% elif r.status=='approved' %}<span class="badge badge-green">✅ APPROVED</span>
-      {% else %}<span class="badge badge-red">❌ REJECTED</span>{% endif %}
-      <span class="txn-id">{{ r.report_id }}</span>
-      <span style="font-size:13px;font-weight:700;color:{{ '#ef4444' if r.fraud_score>=75 else ('#f59e0b' if r.fraud_score>=25 else '#10b981') }}">
-        Fraud Score: {{ r.fraud_score }}/100
-        {{ '🚨' if r.fraud_score>=75 else ('⚠️' if r.fraud_score>=25 else '✅') }}
-      </span>
-    </div>
-    <span style="font-size:12px;color:var(--muted)">{{ r.submitted_at[:16] }}</span>
-  </div>
+      {% if current_status == 'verification_pending' %}
+      <td>
+        <span class="countdown ok" id="rt-{{ r.report_id }}">--:--</span>
+      </td>
+      {% endif %}
 
-  <!-- CUSTOMER & TXN INFO -->
-  <div class="grid-2 mb-4" style="grid-template-columns:repeat(3,1fr)">
-    <div class="card-sm">
-      <p style="font-size:11px;color:var(--muted);margin-bottom:4px">CUSTOMER</p>
-      <p style="font-weight:700">{{ r.full_name }}</p>
-      <p style="font-size:12px;color:var(--subtle)">{{ r.email }}</p>
-    </div>
-    <div class="card-sm">
-      <p style="font-size:11px;color:var(--muted);margin-bottom:4px">TRANSACTION</p>
-      <p class="txn-id">{{ r.txn_id }}</p>
-      <p style="font-size:20px;font-weight:700;color:var(--red);margin-top:4px">₹{{ "{:,.2f}".format(r.amount) }}</p>
-    </div>
-    <div class="card-sm">
-      <p style="font-size:11px;color:var(--muted);margin-bottom:4px">MERCHANT / LOCATION</p>
-      <p style="font-weight:600">{{ r.merchant }}</p>
-      <p style="font-size:12px;color:var(--subtle)">📍 {{ r.location or 'Unknown' }}</p>
-      <p style="font-size:12px;color:var(--muted);margin-top:2px">{{ r.txn_date[:16] if r.txn_date }}</p>
-    </div>
-  </div>
+      <td class="text-xs">{{ r.submitted_at[:10] }}</td>
 
-  <!-- REASON & EVIDENCE -->
-  <div style="padding:14px;background:var(--card2);border-radius:10px;margin-bottom:16px">
-    <p style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.6px">Customer's Reason</p>
-    <p style="font-size:14px;font-weight:500">{{ r.reason }}</p>
-    {% if r.evidence %}
-    <p style="font-size:11px;color:var(--muted);margin-top:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.6px">Evidence / Details</p>
-    <p style="font-size:13px;color:var(--subtle)">{{ r.evidence }}</p>
-    {% else %}
-    <p style="font-size:12px;color:var(--muted);margin-top:8px;font-style:italic">No additional evidence provided.</p>
-    {% endif %}
-  </div>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:160px;">
 
-  {% if r.status == 'pending' %}
-  <!-- ADMIN ACTION FORM -->
-  <div style="background:rgba(15,25,41,.6);border:1px solid var(--border2);border-radius:12px;padding:18px">
-    <p style="font-weight:700;margin-bottom:14px;font-size:14px">⚖️ Your Decision as Admin:</p>
+          {% if r.status == 'pending' %}
+          <!-- Step 1: Admin reviews and sends for verification -->
+          <form method="POST" action="/admin/process/{{ r.report_id }}"
+                onsubmit="return confirm('Send this report for identity verification?\n\nThe receiver will be notified every 15 min for 1 hour to prove their identity.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="action" value="approve"/>
+            <button class="btn btn-sm btn-primary" type="submit" style="width:100%;">
+              🔍 Send for Verification
+            </button>
+          </form>
+          <form method="POST" action="/admin/process/{{ r.report_id }}"
+                onsubmit="return confirm('Reject this fraud report? The user will be notified.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="action" value="reject"/>
+            <button class="btn btn-sm btn-ghost" type="submit" style="width:100%;">
+              ✗ Reject Report
+            </button>
+          </form>
 
-    <!-- APPROVE -->
-    <form method="POST" action="/admin/process/{{ r.report_id }}" style="margin-bottom:12px">
-      <input type="hidden" name="action" value="approve">
-      <div class="form-group" style="margin-bottom:10px">
-        <label>Approval Note (shown to customer)</label>
-        <input type="text" name="admin_notes" value="Verified as fraud. Refund processed immediately."
-               placeholder="Message to show the customer...">
-      </div>
-      <button type="submit" class="btn btn-success" style="width:100%;justify-content:center;font-size:15px;padding:14px"
-              onclick="return confirm('APPROVE: Instantly refund ₹{{ '{:,.2f}'.format(r.amount) }} to {{ r.full_name }}?')">
-        ✅ APPROVE — Instantly Refund ₹{{ "{:,.2f}".format(r.amount) }} to {{ r.full_name }}
-      </button>
-    </form>
+          {% elif r.status == 'verification_pending' %}
+          <!-- Step 2: Verification in progress — go to verifications page to act -->
+          <a href="/admin/verifications" class="btn btn-sm btn-ghost" style="width:100%;text-align:center;">
+            🔍 Review Verification →
+          </a>
+          <div style="font-size:11px;color:var(--text3);text-align:center;padding:2px 0;">
+            Receiver is being notified every 15 min
+          </div>
 
-    <!-- REJECT -->
-    <form method="POST" action="/admin/process/{{ r.report_id }}">
-      <input type="hidden" name="action" value="reject">
-      <div class="form-group" style="margin-bottom:10px">
-        <label>Rejection Reason (shown to customer)</label>
-        <input type="text" name="admin_notes" placeholder="e.g. Transaction appears legitimate. Insufficient evidence of fraud."
-               required>
-      </div>
-      <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center"
-              onclick="return confirm('REJECT this fraud report? Customer will NOT receive a refund.')">
-        ❌ REJECT this Report
-      </button>
-    </form>
-  </div>
+          {% elif r.status in ('approved', 'auto_refunded') %}
+          <!-- Resolved: can delete -->
+          <div style="font-size:12px;color:var(--success);font-weight:600;margin-bottom:3px;">
+            ✅ Refunded
+            {% if r.refund_txn_id %}<br/><span class="font-mono" style="font-size:10px;">{{ r.refund_txn_id }}</span>{% endif %}
+          </div>
+          <form method="POST" action="/admin/delete-report/{{ r.report_id }}"
+                onsubmit="return confirm('Permanently delete this report and its history?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="from_status" value="{{ current_status }}"/>
+            <button class="btn btn-sm btn-danger" type="submit" style="width:100%;">🗑 Delete Record</button>
+          </form>
 
-  {% elif r.status == 'approved' %}
-  <div style="padding:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:10px">
-    <p style="color:var(--green);font-weight:700">✅ Approved & Refunded</p>
-    <p style="font-size:13px;color:var(--subtle);margin-top:4px">Refund TXN: <span class="txn-id">{{ r.refund_txn_id }}</span></p>
-    {% if r.admin_notes %}<p style="font-size:12px;color:var(--muted);margin-top:4px">Note: {{ r.admin_notes }}</p>{% endif %}
-    <p style="font-size:12px;color:var(--muted);margin-top:4px">Reviewed at: {{ r.reviewed_at[:16] if r.reviewed_at }}</p>
-  </div>
+          {% elif r.status == 'rejected' %}
+          <div style="font-size:12px;color:var(--danger);font-weight:600;margin-bottom:3px;">❌ Rejected</div>
+          <form method="POST" action="/admin/delete-report/{{ r.report_id }}"
+                onsubmit="return confirm('Permanently delete this report?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="from_status" value="{{ current_status }}"/>
+            <button class="btn btn-sm btn-danger" type="submit" style="width:100%;">🗑 Delete Record</button>
+          </form>
+          {% endif %}
 
-  {% else %}
-  <div style="padding:14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px">
-    <p style="color:var(--red);font-weight:700">❌ Rejected</p>
-    {% if r.admin_notes %}<p style="font-size:13px;color:var(--subtle);margin-top:4px">{{ r.admin_notes }}</p>{% endif %}
-    <p style="font-size:12px;color:var(--muted);margin-top:4px">Reviewed at: {{ r.reviewed_at[:16] if r.reviewed_at }}</p>
-  </div>
-  {% endif %}
-
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
 </div>
-{% endfor %}
 {% else %}
-<div class="card empty">
-  {% if current_status == 'pending' %}
-  <p style="font-size:24px;margin-bottom:12px">✅</p>
-  <p>No pending reports. All caught up!</p>
-  {% else %}
-  <p>No {{ current_status }} reports found.</p>
-  {% endif %}
+<div class="card" style="text-align:center;padding:48px;color:var(--text3);">
+  No {{ current_status.replace('_',' ') }} reports found.
 </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if current_status == 'verification_pending' %}
+<script>
+fetch('/admin/verifications-json').then(r=>r.json()).then(data=>{
+  data.forEach(v=>{
+    const el=document.getElementById('rt-'+v.report_id);
+    if(!el) return;
+    const deadline=new Date(v.deadline_at);
+    function tick(){
+      const diff=deadline-new Date();
+      if(diff<=0){el.textContent='EXPIRED';el.className='countdown urgent';return;}
+      const m=Math.floor(diff/60000),s=Math.floor((diff%60000)/1000);
+      el.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+      el.className='countdown '+(diff<600000?(diff<180000?'urgent':'warning'):'ok');
+    }
+    tick();setInterval(tick,1000);
+  });
+}).catch(()=>{});
+</script>
 {% endif %}
 {% endblock %}

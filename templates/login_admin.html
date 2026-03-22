@@ -1,223 +1,58 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SafeBank — Admin Portal</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Mulish:wght@300;400;500;600;700&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
-
-body{
-  font-family:'Mulish',sans-serif;min-height:100vh;
-  background:#020408;
-  display:flex;align-items:center;justify-content:center;
-  position:relative;overflow:hidden;
-}
-
-/* Animated background grid */
-body::before{
-  content:'';position:fixed;inset:0;
-  background-image:
-    linear-gradient(rgba(220,38,38,.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(220,38,38,.05) 1px, transparent 1px);
-  background-size:40px 40px;
-  animation:gridMove 20s linear infinite;
-}
-@keyframes gridMove{0%{transform:translateY(0)}100%{transform:translateY(40px)}}
-
-/* Glowing orbs */
-.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none}
-.orb-1{width:400px;height:400px;background:rgba(185,28,28,.15);top:-100px;right:-100px}
-.orb-2{width:300px;height:300px;background:rgba(127,29,29,.1);bottom:-80px;left:-80px}
-
-/* Warning banner at very top */
-.security-banner{
-  position:fixed;top:0;left:0;right:0;
-  background:linear-gradient(90deg,#7f1d1d,#991b1b,#7f1d1d);
-  padding:8px;text-align:center;
-  font-size:11px;font-weight:700;letter-spacing:1.5px;
-  text-transform:uppercase;color:#fca5a5;
-  border-bottom:1px solid rgba(239,68,68,.3);
-  font-family:'DM Mono',monospace;
-  z-index:100;
-}
-
-/* Main card */
-.container{
-  position:relative;z-index:10;
-  width:100%;max-width:440px;
-  padding:20px;
-}
-
-.card{
-  background:rgba(10,14,26,.95);
-  border:1px solid rgba(239,68,68,.2);
-  border-radius:20px;
-  padding:40px;
-  backdrop-filter:blur(20px);
-  box-shadow:0 0 60px rgba(185,28,28,.15), 0 25px 60px rgba(0,0,0,.5);
-}
-
-/* Shield icon with pulse */
-.shield-wrap{text-align:center;margin-bottom:28px}
-.shield{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:72px;height:72px;
-  background:linear-gradient(135deg,#7f1d1d,#dc2626);
-  border-radius:18px;font-size:36px;
-  box-shadow:0 0 30px rgba(220,38,38,.4);
-  animation:pulse 3s ease-in-out infinite;
-}
-@keyframes pulse{
-  0%,100%{box-shadow:0 0 30px rgba(220,38,38,.4)}
-  50%{box-shadow:0 0 50px rgba(220,38,38,.7),0 0 80px rgba(220,38,38,.2)}
-}
-
-.portal-label{
-  font-family:'DM Mono',monospace;
-  font-size:11px;letter-spacing:2px;text-transform:uppercase;
-  color:#ef4444;margin-top:14px;margin-bottom:4px;
-}
-.portal-title{
-  font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;
-}
-.portal-sub{font-size:13px;color:#4a6080;margin-top:6px}
-
-/* Divider */
-.divider{
-  display:flex;align-items:center;gap:10px;
-  margin:24px 0;color:#1e2d45;font-size:11px;
-  font-family:'DM Mono',monospace;letter-spacing:1px;
-}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:#1e2d45}
-
-/* Flash messages */
-.flash{
-  padding:12px 14px;border-radius:10px;margin-bottom:20px;
-  font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;
-}
-.flash-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
-.flash-warning{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fde68a}
-
-/* Form */
-.form-group{margin-bottom:18px}
-label{
-  display:block;font-size:11px;font-weight:700;
-  color:#4a6080;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;
-  font-family:'DM Mono',monospace;
-}
-input{
-  width:100%;background:rgba(15,25,41,.8);
-  border:1px solid #1e3554;color:#e2eaf6;
-  border-radius:10px;padding:13px 16px;font-size:14px;
-  font-family:inherit;outline:none;transition:.2s;
-}
-input:focus{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.1);background:rgba(20,30,50,.9)}
-input::placeholder{color:#2d4a66}
-
-.btn-admin{
-  width:100%;padding:14px;
-  background:linear-gradient(135deg,#7f1d1d,#dc2626);
-  color:#fff;border:none;border-radius:10px;
-  font-size:14px;font-weight:700;font-family:inherit;
-  cursor:pointer;transition:.2s;margin-top:4px;
-  letter-spacing:.5px;text-transform:uppercase;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-}
-.btn-admin:hover{
-  transform:translateY(-1px);
-  box-shadow:0 8px 24px rgba(220,38,38,.4);
-}
-
-/* Security notice */
-.security-notice{
-  margin-top:24px;padding:14px;
-  background:rgba(127,29,29,.15);
-  border:1px solid rgba(239,68,68,.15);
-  border-radius:10px;
-}
-.security-notice p{font-size:11px;color:#4a6080;line-height:1.7;font-family:'DM Mono',monospace}
-.security-notice strong{color:#6b7280}
-
-/* Back link */
-.back-link{
-  text-align:center;margin-top:20px;
-  font-size:12px;color:#2d4a66;
-}
-.back-link a{color:#374151;font-weight:600;text-decoration:none}
-.back-link a:hover{color:#6b7280}
-
-/* Blinking cursor effect on title */
-.cursor::after{
-  content:'|';animation:blink 1s step-end infinite;margin-left:2px;color:#dc2626;
-}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-</style>
-</head>
-<body>
-
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
-
-<div class="security-banner">
-  ⚠ RESTRICTED ACCESS — AUTHORIZED BANK ADMINISTRATORS ONLY ⚠
-</div>
-
-<div class="container">
-  <div class="card">
-
-    <!-- Header -->
-    <div class="shield-wrap">
-      <div class="shield">🔐</div>
-      <p class="portal-label">SafeBank System</p>
-      <h1 class="portal-title">Admin Portal<span class="cursor"></span></h1>
-      <p class="portal-sub">Authorized personnel only</p>
+{% extends "base.html" %}
+{% block title %}Admin Login — SafeBank{% endblock %}
+{% block nav_bar %}{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div style="position:absolute;top:16px;right:16px;">
+      <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
     </div>
+    <div class="auth-logo">
+      <div class="auth-logo-mark" style="background:var(--accent);">A</div>
+      <div>
+        <div style="font-weight:800;font-size:18px;">SafeBank Admin</div>
+        <div style="font-size:11px;color:var(--text3);">Restricted access</div>
+      </div>
+    </div>
+    <div class="auth-title">Admin Portal</div>
+    <div class="auth-sub">Sign in with your administrator credentials</div>
 
-    <div class="divider">── SECURE LOGIN ──</div>
-
-    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-    <div class="flash flash-{{ category }}">
-      {{ '❌' if category=='error' else '⚠️' }} {{ message }}
-    </div>
-    {% endfor %}
-    {% endwith %}
+    {% if messages %}<div class="alerts">
+      {% for cat,msg in messages %}
+      <div class="alert alert-{{ 'error' if cat=='error' else ('success' if cat=='success' else 'info') }}">{{ msg }}</div>
+      {% endfor %}
+    </div>{% endif %}{% endwith %}
 
-    <!-- Form -->
-    <form method="POST" action="/admin/login">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="form-group">
-        <label>Admin Email</label>
-        <input type="email" name="email" placeholder="admin@safebank.com" required autofocus>
+        <label class="form-label">Admin email</label>
+        <input type="email" name="email" class="form-input" placeholder="admin@safebank.com" required autofocus/>
       </div>
       <div class="form-group">
-        <label>Admin Password</label>
-        <input type="password" name="password" placeholder="••••••••••••" required>
+        <label class="form-label">Password</label>
+        <div class="pw-wrap">
+          <input type="password" name="password" class="form-input" placeholder="••••••••" required/>
+          <button type="button" class="pw-eye" onclick="togglePw(this)">👁</button>
+        </div>
       </div>
-      <button type="submit" class="btn-admin">
-        🔐 Access Admin Panel
+      <button type="submit" class="btn btn-full" style="background:var(--accent);color:#fff;margin-top:8px;">
+        Sign In as Admin
       </button>
     </form>
 
-    <!-- Security Notice -->
-    <div class="security-notice">
-      <p>
-        <strong>⚠ SECURITY NOTICE</strong><br>
-        This portal is exclusively for SafeBank administrators.<br>
-        Unauthorized access attempts are logged and reported.<br>
-        All admin actions are audited and recorded.
-      </p>
+    <div class="divider"></div>
+    <div style="text-align:center;">
+      <a href="/login" style="font-size:13px;color:var(--text3);">← Back to customer login</a>
     </div>
-
-    <!-- Link back to customer portal -->
-    <div class="back-link">
-      Not an admin? <a href="/login">← Go to Customer Login</a>
-    </div>
-
   </div>
 </div>
-
-</body>
-</html>
+<script>
+(function(){
+  const s=localStorage.getItem('sb-theme')||'light';
+  document.documentElement.setAttribute('data-theme',s);
+  document.getElementById('theme-btn').textContent=s==='dark'?'☀️':'🌙';
+})();
+</script>
+{% endblock %}

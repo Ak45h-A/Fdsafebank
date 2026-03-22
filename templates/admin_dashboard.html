@@ -1,107 +1,160 @@
-{% extends "base.html" %}
-{% block title %}Admin Dashboard{% endblock %}
-{% block content %}
+{% extends "admin_base.html" %}
+{% block title %}Overview — SafeBank Admin{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+  <div class="page-title">System Overview</div>
+  <div class="page-sub">SafeBank Admin Panel · Real-time data</div>
+</div>
 
-<div class="flex-between mb-4">
-  <div>
-    <h1 class="page-title" style="margin-bottom:4px">🔧 Admin Dashboard</h1>
-    <p style="color:var(--muted);font-size:13px">SafeBank Fraud Management Panel</p>
+<div class="stats-grid mb-3">
+  <div class="stat-card c-amber">
+    <div class="stat-icon">⚑</div>
+    <div class="stat-val">{{ pending|length }}</div>
+    <div class="stat-lbl">Pending reports</div>
   </div>
-  <a href="/admin/reports?status=pending" class="btn btn-danger">
-    🚨 Review Pending Reports
-    {% if pending %}<span style="background:rgba(255,255,255,.2);padding:2px 8px;border-radius:8px;margin-left:6px">{{ pending|length }}</span>{% endif %}
+  <div class="stat-card c-green">
+    <div class="stat-icon">✓</div>
+    <div class="stat-val">{{ approved|length }}</div>
+    <div class="stat-lbl">Refunds issued</div>
+  </div>
+  <div class="stat-card c-red">
+    <div class="stat-icon">◎</div>
+    <div class="stat-val">{{ active_verifications|length }}</div>
+    <div class="stat-lbl">Verifications active</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">◑</div>
+    <div class="stat-val">{{ users|selectattr('is_admin','equalto',0)|list|length }}</div>
+    <div class="stat-lbl">Registered users</div>
+  </div>
+  <div class="stat-card c-purple">
+    <div class="stat-icon">⊘</div>
+    <div class="stat-val">{{ blacklist|length }}</div>
+    <div class="stat-lbl">Blacklisted</div>
+  </div>
+</div>
+
+<div class="grid-2 mb-3">
+  <a href="/admin/reports?status=pending" style="text-decoration:none;">
+    <div class="card" style="border-color:{% if pending %}var(--amber){% else %}var(--border){% endif %};cursor:pointer;transition:.15s;">
+      <div class="flex justify-between items-center">
+        <div>
+          <div style="font-size:13px;font-weight:700;">Pending Reports</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Awaiting review</div>
+        </div>
+        <div style="font-size:30px;font-weight:900;color:var(--amber);">{{ pending|length }}</div>
+      </div>
+    </div>
+  </a>
+  <a href="/admin/verifications" style="text-decoration:none;">
+    <div class="card" style="border-color:{% if active_verifications %}var(--red){% else %}var(--border){% endif %};cursor:pointer;transition:.15s;">
+      <div class="flex justify-between items-center">
+        <div>
+          <div style="font-size:13px;font-weight:700;">Active Verifications</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Identity checks</div>
+        </div>
+        <div style="font-size:30px;font-weight:900;color:var(--red);">{{ active_verifications|length }}</div>
+      </div>
+    </div>
   </a>
 </div>
 
-<!-- STATS -->
-<div class="grid-3 mb-4" style="grid-template-columns:repeat(4,1fr)">
-  <div class="stat">
-    <div class="stat-label">Pending Reports</div>
-    <div class="stat-value" style="color:var(--yellow)">{{ pending|length }}</div>
-    <div class="stat-sub">Need your review</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Approved Refunds</div>
-    <div class="stat-value" style="color:var(--green)">{{ approved|length }}</div>
-    <div class="stat-sub">Money returned</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Rejected</div>
-    <div class="stat-value" style="color:var(--red)">{{ rejected|length }}</div>
-    <div class="stat-sub">Invalid reports</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Total Users</div>
-    <div class="stat-value" style="color:var(--blue3)">{{ users|length }}</div>
-    <div class="stat-sub">Registered accounts</div>
-  </div>
-</div>
-
-<!-- PENDING REPORTS -->
 {% if pending %}
-<div class="card mb-4">
-  <h2 style="font-family:'Syne',sans-serif;font-size:16px;margin-bottom:16px;color:var(--yellow)">
-    ⚠️ Pending Fraud Reports — Action Required
-  </h2>
-  {% for r in pending[:5] %}
-  <div style="padding:16px;background:var(--card2);border-radius:12px;margin-bottom:12px;border:1px solid var(--border2)">
-    <div class="flex-between mb-4">
-      <div class="flex gap-3">
-        <span class="txn-id">{{ r.report_id }}</span>
-        <span style="font-size:13px;font-weight:600;color:{{ '#ef4444' if r.fraud_score>=75 else ('#f59e0b' if r.fraud_score>=25 else '#10b981') }}">
-          Score: {{ r.fraud_score }}/100
-        </span>
-      </div>
-      <span style="font-size:12px;color:var(--muted)">{{ r.submitted_at[:16] }}</span>
-    </div>
-    <div class="grid-2" style="margin-bottom:12px">
-      <div><span style="font-size:12px;color:var(--muted)">Customer: </span><strong>{{ r.full_name }}</strong> ({{ r.email }})</div>
-      <div><span style="font-size:12px;color:var(--muted)">Amount: </span><strong style="color:var(--red)">₹{{ "{:,.2f}".format(r.amount) }}</strong></div>
-      <div><span style="font-size:12px;color:var(--muted)">Merchant: </span>{{ r.merchant }}</div>
-      <div><span style="font-size:12px;color:var(--muted)">Reason: </span>{{ r.reason[:60] }}...</div>
-    </div>
-    <div class="flex gap-2">
-      <form method="POST" action="/admin/process/{{ r.report_id }}" style="display:inline">
-        <input type="hidden" name="action" value="approve">
-        <input type="hidden" name="admin_notes" value="Verified as fraud. Refund processed immediately.">
-        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Approve this report and instantly refund ₹{{ '{:,.2f}'.format(r.amount) }}?')">
-          ✅ Approve & Refund
-        </button>
-      </form>
-      <a href="/admin/reports?status=pending" class="btn btn-ghost btn-sm">View Details →</a>
-    </div>
-  </div>
-  {% endfor %}
-  {% if pending|length > 5 %}
-  <a href="/admin/reports?status=pending" class="btn btn-ghost btn-full mt-4">View All {{ pending|length }} Pending Reports →</a>
-  {% endif %}
+<div class="sec-head mt-3">
+  <div class="sec-title">Pending Reports</div>
+  <a href="/admin/reports?status=pending" class="sec-link">View all →</a>
+</div>
+<div class="tbl-wrap mb-3">
+  <table>
+    <thead><tr><th>Reporter</th><th>Merchant</th><th>Amount</th><th>Score</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+    {% for r in pending[:5] %}
+    <tr>
+      <td><div style="font-weight:600;">{{ r.full_name }}</div>
+          <div class="text-xs">{{ r.email }}</div></td>
+      <td>{{ r.merchant }}</td>
+      <td style="font-weight:700;color:var(--red);">₹{{ "%.2f"|format(r.amount) }}</td>
+      <td><span class="badge {{ 'badge-danger' if r.fraud_score>=75 else ('badge-warn' if r.fraud_score>=50 else ('badge-info' if r.fraud_score>=25 else 'badge-gray')) }}">{{ r.fraud_score }}</span></td>
+      <td class="text-xs">{{ r.submitted_at[:10] }}</td>
+      <td><a href="/admin/reports?status=pending" class="btn btn-sm btn-ghost">Review</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endif %}
 
-<!-- RECENT APPROVED -->
-<div class="card">
-  <div class="flex-between mb-4">
-    <h2 style="font-family:'Syne',sans-serif;font-size:16px">Recently Approved Refunds</h2>
-    <a href="/admin/reports?status=approved" class="btn btn-ghost btn-sm">View All</a>
-  </div>
-  {% if approved %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Customer</th><th>Amount</th><th>Merchant</th><th>Reviewed</th></tr></thead>
-      <tbody>
-      {% for r in approved[:5] %}
-      <tr>
-        <td>{{ r.full_name }}</td>
-        <td style="color:var(--green);font-weight:700">₹{{ "{:,.2f}".format(r.amount) }}</td>
-        <td>{{ r.merchant }}</td>
-        <td style="color:var(--muted)">{{ r.reviewed_at[:16] if r.reviewed_at }}</td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <p class="text-muted">No approved refunds yet.</p>
-  {% endif %}
+{% if active_verifications %}
+<div class="sec-head mt-3">
+  <div class="sec-title">Active Verifications</div>
+  <a href="/admin/verifications" class="sec-link">View all →</a>
 </div>
+<div class="tbl-wrap mb-3">
+  <table>
+    <thead><tr><th>Reporter</th><th>Merchant</th><th>Amount</th><th>Status</th><th>Deadline</th></tr></thead>
+    <tbody>
+    {% for v in active_verifications %}
+    <tr>
+      <td style="font-weight:600;">{{ v.reporter_name }}</td>
+      <td>{{ v.merchant }}</td>
+      <td style="font-weight:700;color:var(--red);">₹{{ "%.2f"|format(v.amount) }}</td>
+      <td><span class="badge badge-warn">{{ v.status.replace('_',' ') }}</span></td>
+      <td><span class="countdown ok" id="vt-{{ loop.index }}">--:--</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="sec-head mt-3">
+  <div class="sec-title">Registered Users</div>
+  <a href="/admin/users" class="sec-link">Manage →</a>
+</div>
+<div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Name</th><th>Email</th><th>Balance</th><th>Status</th><th>Joined</th></tr></thead>
+    <tbody>
+    {% for u in users %}{% if not u.is_admin %}
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:26px;height:26px;border-radius:6px;background:var(--brand-lt);
+                      color:var(--brand-dk);font-weight:900;font-size:11px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            {{ u.full_name[0].upper() }}
+          </div>
+          <span style="font-weight:600;">{{ u.full_name }}</span>
+        </div>
+      </td>
+      <td class="text-xs font-mono">{{ u.email }}</td>
+      <td style="font-weight:700;color:var(--green);">₹{{ "%.2f"|format(u.balance) }}</td>
+      <td><span class="badge {{ 'badge-success' if u.acc_status=='active' else 'badge-danger' }}">{{ u.acc_status }}</span>
+          {% if u.locked_until %}<span class="badge badge-warn" style="margin-left:3px;">Locked</span>{% endif %}</td>
+      <td class="text-xs">{{ u.created_at[:10] }}</td>
+    </tr>
+    {% endif %}{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% for v in active_verifications %}
+(function(){
+  const el=document.getElementById('vt-{{ loop.index }}');
+  if(!el) return;
+  const deadline=new Date("{{ v.deadline_at }}");
+  function tick(){
+    const diff=deadline-new Date();
+    if(diff<=0){el.textContent='EXPIRED';el.className='countdown urgent';return;}
+    const m=Math.floor(diff/60000),s=Math.floor((diff%60000)/1000);
+    el.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    el.className='countdown '+(diff<600000?(diff<180000?'urgent':'warning'):'ok');
+  }
+  tick();setInterval(tick,1000);
+})();
+{% endfor %}
+</script>
 {% endblock %}

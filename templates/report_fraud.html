@@ -1,117 +1,141 @@
 {% extends "base.html" %}
-{% block title %}Report Fraud{% endblock %}
-{% block content %}
-<div style="max-width:640px;margin:0 auto">
-<h1 class="page-title">🚨 Report Fraud & Request Refund</h1>
+{% block title %}Report Fraud — SafeBank{% endblock %}
+{% block nav_links %}
+<div class="nav-links">
+  <a href="/dashboard" class="nav-link">Home</a>
+  <a href="/transactions" class="nav-link">Transactions</a>
+  <a href="/pay" class="nav-link">Pay</a>
+  <a href="/deposit" class="nav-link">Deposit</a>
+  <a href="/my-reports" class="nav-link active">My Reports</a>
+</div>
+{% endblock %}
+{% block nav_right %}
+<div class="nav-avatar">{{ acc.full_name[0].upper() }}</div>
+<a href="/logout" class="nav-link" style="color:var(--text3);font-size:13px;">Out</a>
+{% endblock %}
 
-<div class="card mb-4" style="background:rgba(37,99,235,.05);border-color:rgba(37,99,235,.3)">
-  <div style="display:flex;gap:14px;align-items:flex-start">
-    <div style="font-size:28px;flex-shrink:0">🔍</div>
+{% block body %}
+<div class="page-md">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+    <a href="/my-reports" class="back-btn">← Back</a>
     <div>
-      <p style="font-weight:700;color:var(--blue3);margin-bottom:6px">How It Works</p>
-      <ol style="font-size:13px;color:var(--subtle);line-height:1.9;padding-left:18px">
-        <li>Select the suspicious transaction from the list below</li>
-        <li>Explain what happened and submit the report</li>
-        <li><strong style="color:var(--yellow)">Admin reviews your report</strong> — usually within minutes</li>
-        <li>Once admin approves — <strong style="color:var(--green)">money is instantly credited back</strong> to your account</li>
-      </ol>
+      <div style="font-size:22px;font-weight:800;">Report a Fraud Transaction</div>
+      <div style="font-size:13px;color:var(--text3);">Select any transaction you believe is fraudulent</div>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}<div class="alerts mb-3">
+    {% for cat,msg in messages %}
+    <div class="alert alert-{{ 'error' if cat=='error' else 'success' }}">{{ msg }}</div>
+    {% endfor %}
+  </div>{% endif %}{% endwith %}
+
+  <div class="card">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+      <div class="form-group">
+        <label class="form-label">Select transaction to report</label>
+        {% if refundable %}
+        <select name="txn_id" class="form-input form-select" required id="txn-select">
+          <option value="">— Choose a transaction —</option>
+          {% for t in refundable %}
+          <option value="{{ t.txn_id }}" {{ 'selected' if request.args.get('txn')==t.txn_id }}>
+            {% if t.txn_type == 'credit' %}[CREDIT]{% elif t.txn_type == 'reversal' %}[REVERSAL]{% elif t.status == 'blocked' %}[BLOCKED]{% else %}[DEBIT]{% endif %}
+            {{ t.merchant or t.description or 'Transaction' }} — ₹{{ "%.2f"|format(t.amount) }} — {{ t.timestamp[:10] }}{% if t.fraud_score >= 25 %} ⚠{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--radius-sm);
+                    color:var(--text3);font-size:14px;text-align:center;">
+          No transactions found to report. Make a payment first.
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Transaction preview -->
+      <div id="txn-preview" style="display:none;background:var(--surface2);border-radius:var(--radius-sm);
+           padding:14px;margin-bottom:18px;font-size:14px;"></div>
+
+      <div class="form-group">
+        <label class="form-label">Reason for reporting</label>
+        <select name="reason" class="form-input form-select" required>
+          <option value="">— Select reason —</option>
+          <option>Unauthorized transaction — I did not make this payment</option>
+          <option>Merchant did not deliver goods or services</option>
+          <option>Duplicate charge — charged more than once</option>
+          <option>Incorrect amount charged</option>
+          <option>Card / account compromised or stolen</option>
+          <option>Phishing or scam payment</option>
+          <option>Other suspicious activity</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Additional details (optional)</label>
+        <textarea name="evidence" class="form-input" rows="3"
+                  placeholder="Describe what happened — any order IDs, screenshots, or other info that helps our team..."></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-danger btn-full" {{ 'disabled' if not refundable }}>
+        🚨 Submit Fraud Report
+      </button>
+    </form>
+  </div>
+
+  <div class="card mt-3" style="background:var(--warn-lt);border-color:var(--warn);">
+    <div style="font-weight:700;color:var(--warn);margin-bottom:8px;">ℹ️ What happens next?</div>
+    <div style="font-size:14px;color:var(--text2);line-height:1.8;">
+      1. Our admin reviews your report within 24 hours<br/>
+      2. If confirmed fraudulent, the receiver gets <strong>1 hour</strong> to verify their identity (PAN / Aadhaar / Passport)<br/>
+      3. If they fail to verify — your money is <strong>automatically refunded</strong><br/>
+      4. You receive email updates at every step
     </div>
   </div>
 </div>
 
-{% if refundable %}
-<div class="card">
-  <form method="POST">
-    <div class="form-group">
-      <label>Select the Fraudulent Transaction</label>
-      <select name="txn_id" required id="txn-select">
-        <option value="">— Choose a transaction —</option>
-        {% for t in refundable %}
-        <option value="{{ t.txn_id }}"
-          data-amount="₹{{ '{:,.2f}'.format(t.amount) }}"
-          data-merchant="{{ t.merchant }}"
-          data-score="{{ t.fraud_score }}"
-          {% if request.args.get('txn_id') == t.txn_id %}selected{% endif %}>
-          {{ t.txn_id }}  |  ₹{{ "{:,.2f}".format(t.amount) }}  →  {{ t.merchant }}  |  {{ t.timestamp[:16] }}
-          {% if t.fraud_score >= 75 %} 🚨{% elif t.fraud_score >= 25 %} ⚠️{% endif %}
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <!-- Live transaction preview -->
-    <div id="txn-preview" style="display:none;padding:14px;background:var(--card2);border-radius:10px;margin-bottom:18px;border:1px solid var(--border2)">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <p style="font-size:13px;color:var(--muted)">Amount</p>
-          <p id="prev-amount" style="font-size:20px;font-weight:700;color:var(--red)"></p>
-        </div>
-        <div>
-          <p style="font-size:13px;color:var(--muted)">Merchant</p>
-          <p id="prev-merchant" style="font-weight:600"></p>
-        </div>
-        <div>
-          <p style="font-size:13px;color:var(--muted)">Fraud Score</p>
-          <p id="prev-score" style="font-weight:700"></p>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>Reason for Reporting</label>
-      <select name="reason" required>
-        <option value="">— Select reason —</option>
-        <option value="I did not make this payment — unauthorized transaction">I did not make this payment (unauthorized)</option>
-        <option value="I was scammed / cheated into making this payment">I was scammed / cheated</option>
-        <option value="Duplicate charge — same amount charged more than once">Duplicate charge</option>
-        <option value="Merchant did not deliver the product or service">Merchant didn't deliver</option>
-        <option value="My account was hacked and used without my knowledge">Account was hacked</option>
-        <option value="Other fraud — see evidence field">Other (explain below)</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>Additional Evidence / Details (recommended)</label>
-      <textarea name="evidence" rows="3" placeholder="Describe exactly what happened. Any extra details help the admin verify your report faster and increases chances of approval..."></textarea>
-    </div>
-
-    <button type="submit" class="btn btn-danger btn-full" style="font-size:15px;padding:14px">
-      🚨 Submit Fraud Report
-    </button>
-
-    <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:12px">
-      Your report will be reviewed by the bank admin. Refund is processed upon approval.
-    </p>
-  </form>
-</div>
-{% else %}
-<div class="card empty">
-  <p>No refundable transactions found.</p>
-  <p style="margin-top:8px;font-size:13px">All your transactions have already been refunded, or you have no debit transactions yet.</p>
-</div>
-{% endif %}
-</div>
-
 {% block scripts %}
 <script>
-const sel = document.getElementById('txn-select');
-const preview = document.getElementById('txn-preview');
-sel && sel.addEventListener('change', function() {
-  const opt = this.options[this.selectedIndex];
-  if (opt.value) {
-    document.getElementById('prev-amount').textContent = opt.dataset.amount;
-    document.getElementById('prev-merchant').textContent = opt.dataset.merchant;
-    const score = parseInt(opt.dataset.score);
-    const el = document.getElementById('prev-score');
-    el.textContent = score + '/100';
-    el.style.color = score >= 75 ? '#ef4444' : score >= 25 ? '#f59e0b' : '#10b981';
-    preview.style.display = 'block';
-  } else {
-    preview.style.display = 'none';
-  }
+const txns = {
+  {% for t in refundable %}
+  "{{ t.txn_id }}": {
+    merchant: "{{ (t.merchant or t.description or 'Transaction')|replace('"',"'") }}",
+    amount: "{{ t.amount }}",
+    type: "{{ t.txn_type }}",
+    status: "{{ t.status }}",
+    date: "{{ t.timestamp[:16] }}",
+    score: {{ t.fraud_score or 0 }}
+  },
+  {% endfor %}
+};
+
+document.getElementById('txn-select') && document.getElementById('txn-select').addEventListener('change', function(){
+  const preview = document.getElementById('txn-preview');
+  const txn = txns[this.value];
+  if(!txn){ preview.style.display='none'; return; }
+  const isCredit = txn.type==='credit'||txn.type==='reversal';
+  preview.style.display='block';
+  preview.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <div>
+        <div style="font-weight:700;font-size:15px;">${txn.merchant}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px;">${txn.type.toUpperCase()} · ${txn.date}</div>
+        ${txn.score>=25?'<div style="font-size:12px;color:var(--warn);margin-top:3px;">⚠️ Fraud score: '+txn.score+'</div>':''}
+      </div>
+      <div style="font-size:20px;font-weight:800;color:${isCredit?'var(--success)':'var(--danger)'};">
+        ${isCredit?'+':'-'}₹${parseFloat(txn.amount).toFixed(2)}
+      </div>
+    </div>`;
 });
-// Auto-select if txn_id in URL
-if (sel && sel.value) sel.dispatchEvent(new Event('change'));
+
+/* Pre-select if ?txn= param present */
+const urlTxn = new URLSearchParams(window.location.search).get('txn');
+if(urlTxn){
+  const sel = document.getElementById('txn-select');
+  if(sel){ sel.value=urlTxn; sel.dispatchEvent(new Event('change')); }
+}
 </script>
 {% endblock %}
 {% endblock %}

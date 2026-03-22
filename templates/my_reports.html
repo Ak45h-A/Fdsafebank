@@ -1,81 +1,83 @@
 {% extends "base.html" %}
-{% block title %}My Fraud Reports{% endblock %}
-{% block content %}
-<h1 class="page-title">📝 My Fraud Reports</h1>
+{% block title %}My Reports — SafeBank{% endblock %}
+{% block nav_links %}
+<div class="nav-links">
+  <a href="/dashboard" class="nav-link">Home</a>
+  <a href="/transactions" class="nav-link">Transactions</a>
+  <a href="/pay" class="nav-link">Pay</a>
+  <a href="/deposit" class="nav-link">Deposit</a>
+  <a href="/my-reports" class="nav-link active">My Reports</a>
+</div>
+{% endblock %}
+{% block nav_right %}
+<div class="nav-avatar">{{ acc.full_name[0].upper() }}</div>
+<a href="/logout" class="nav-link" style="color:var(--text3);font-size:13px;">Out</a>
+{% endblock %}
 
-{% if reports %}
-{% for r in reports %}
-<div class="card mb-4" style="border-left:4px solid {{ '#f59e0b' if r.status=='pending' else ('#10b981' if r.status=='approved' else '#ef4444') }}">
-  <div class="flex-between mb-4">
-    <div class="flex gap-3">
-      {% if r.status == 'pending' %}
-        <span class="badge badge-yellow">🕐 PENDING REVIEW</span>
-      {% elif r.status == 'approved' %}
-        <span class="badge badge-green">✅ APPROVED — REFUNDED</span>
-      {% else %}
-        <span class="badge badge-red">❌ REJECTED</span>
+{% block body %}
+<div class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:14px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <a href="/dashboard" class="back-btn">← Back</a>
+      <div>
+        <div style="font-size:22px;font-weight:800;">My Fraud Reports</div>
+        <div style="font-size:13px;color:var(--text3);">{{ reports|length }} total report(s)</div>
+      </div>
+    </div>
+    <a href="/report-fraud" class="btn btn-primary">+ New Report</a>
+  </div>
+
+  {% if reports %}
+  <div style="display:flex;flex-direction:column;gap:14px;">
+  {% for r in reports %}
+  <div class="card" id="report-card-{{ r.report_id }}">
+    <div class="flex justify-between items-center mb-2">
+      <div>
+        <div style="font-weight:700;font-size:15px;">{{ r.merchant }}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;">{{ r.txn_id }}</div>
+      </div>
+      <span class="badge {{ 'badge-warn' if r.status=='pending' else ('badge-success' if r.status=='approved' else ('badge-info' if r.status=='verification_pending' else 'badge-danger')) }}"
+            id="status-badge-{{ r.report_id }}">
+        {{ r.status.replace('_',' ') }}
+      </span>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:14px;color:var(--text2);">
+      <div><span style="color:var(--text3);font-size:11px;display:block;margin-bottom:2px;">Amount</span>
+           <strong style="color:var(--danger);">₹{{ "%.2f"|format(r.amount) }}</strong></div>
+      <div><span style="color:var(--text3);font-size:11px;display:block;margin-bottom:2px;">Reported</span>{{ r.submitted_at[:10] }}</div>
+      <div><span style="color:var(--text3);font-size:11px;display:block;margin-bottom:2px;">Fraud score</span>{{ r.fraud_score }}</div>
+      {% if r.admin_notes %}
+      <div><span style="color:var(--text3);font-size:11px;display:block;margin-bottom:2px;">Admin note</span>{{ r.admin_notes }}</div>
       {% endif %}
-      <span class="txn-id" style="font-size:12px">{{ r.report_id }}</span>
     </div>
-    <span style="font-size:12px;color:var(--muted)">{{ r.submitted_at[:16] }}</span>
+    <div style="margin-top:10px;font-size:13px;color:var(--text3);">{{ r.reason }}</div>
   </div>
-
-  <div class="grid-2" style="margin-bottom:14px">
-    <div>
-      <p style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Transaction</p>
-      <p class="txn-id">{{ r.txn_id }}</p>
-    </div>
-    <div>
-      <p style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Amount</p>
-      <p style="font-weight:700;font-size:20px;color:var(--red)">₹{{ "{:,.2f}".format(r.amount) }}</p>
-    </div>
-    <div>
-      <p style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Merchant</p>
-      <p>{{ r.merchant }}</p>
-    </div>
-    <div>
-      <p style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Fraud Score</p>
-      <p style="font-weight:700;color:{{ '#ef4444' if r.fraud_score>=75 else ('#f59e0b' if r.fraud_score>=25 else '#10b981') }}">{{ r.fraud_score }}/100</p>
-    </div>
+  {% endfor %}
   </div>
-
-  <div style="padding:12px;background:var(--card2);border-radius:8px;margin-bottom:12px">
-    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">YOUR REASON</p>
-    <p style="font-size:13px">{{ r.reason }}</p>
-    {% if r.evidence %}
-    <p style="font-size:11px;color:var(--muted);margin-top:8px;margin-bottom:4px">EVIDENCE</p>
-    <p style="font-size:13px;color:var(--subtle)">{{ r.evidence }}</p>
-    {% endif %}
-  </div>
-
-  {% if r.status == 'approved' %}
-  <div style="padding:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:10px">
-    <p style="color:var(--green);font-weight:700;margin-bottom:6px">✅ Refund Processed!</p>
-    <p style="font-size:13px;color:var(--subtle)">₹{{ "{:,.2f}".format(r.amount) }} has been credited back to your account.</p>
-    <p style="font-size:12px;color:var(--muted);margin-top:4px">Refund TXN: <span class="txn-id">{{ r.refund_txn_id }}</span></p>
-    {% if r.admin_notes %}<p style="font-size:12px;color:var(--muted);margin-top:4px">Bank Note: {{ r.admin_notes }}</p>{% endif %}
-    <p style="font-size:12px;color:var(--muted);margin-top:4px">Reviewed: {{ r.reviewed_at[:16] if r.reviewed_at }}</p>
-  </div>
-
-  {% elif r.status == 'rejected' %}
-  <div style="padding:14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px">
-    <p style="color:var(--red);font-weight:700;margin-bottom:4px">❌ Report Rejected</p>
-    {% if r.admin_notes %}<p style="font-size:13px;color:var(--subtle)">Reason: {{ r.admin_notes }}</p>{% endif %}
-    <p style="font-size:12px;color:var(--muted);margin-top:4px">Reviewed: {{ r.reviewed_at[:16] if r.reviewed_at }}</p>
-  </div>
-
   {% else %}
-  <div style="padding:12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px">
-    <p style="color:var(--yellow);font-size:13px">🕐 Your report is currently being reviewed by the bank admin. You'll see the refund in your account as soon as it's approved.</p>
+  <div class="card" style="text-align:center;padding:48px;">
+    <div style="font-size:40px;margin-bottom:12px;">🛡️</div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:6px;">No fraud reports</div>
+    <div style="color:var(--text3);font-size:14px;margin-bottom:20px;">All your transactions look clean!</div>
+    <a href="/report-fraud" class="btn btn-primary">Report a Transaction</a>
   </div>
   {% endif %}
 </div>
-{% endfor %}
 
-{% else %}
-<div class="card empty">
-  <p>No fraud reports yet.</p>
-  <p style="margin-top:8px;font-size:13px">If you see a suspicious transaction, <a href="/report-fraud">report it here →</a></p>
-</div>
-{% endif %}
+{% block scripts %}
+<script>
+setInterval(function(){
+  {% for r in reports %}
+  {% if r.status in ('pending','verification_pending') %}
+  fetch('/api/report-status/{{ r.report_id }}').then(r=>r.json()).then(d=>{
+    if(d.status){
+      const b=document.getElementById('status-badge-{{ r.report_id }}');
+      if(b) b.textContent=d.status.replace(/_/g,' ');
+    }
+  }).catch(()=>{});
+  {% endif %}
+  {% endfor %}
+},30000);
+</script>
+{% endblock %}
 {% endblock %}

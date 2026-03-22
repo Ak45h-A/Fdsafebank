@@ -1,104 +1,82 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
-{% block content %}
-
-<div class="flex-between mb-4">
-  <div>
-    <h1 class="page-title" style="margin-bottom:4px">Welcome back, {{ acc.full_name }} 👋</h1>
-    <p style="color:var(--muted);font-size:14px">Account: <span class="mono">{{ acc.account_id }}</span></p>
-  </div>
-  <a href="/pay" class="btn btn-primary">💳 Make Payment</a>
-</div>
-
-<!-- BALANCE CARD -->
-<div class="card mb-4" style="background:linear-gradient(135deg,#0d1f3c,#0a1628);border-color:#1e3a5f">
-  <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px">Current Balance</p>
-  <p id="live-balance" style="font-family:'Syne',sans-serif;font-size:42px;font-weight:800;color:#60a5fa">
-    ₹{{ "{:,.2f}".format(acc.balance) }}
-  </p>
-  <p style="font-size:12px;color:var(--muted);margin-top:8px">{{ acc.account_id }} · {{ acc.status }}</p>
-</div>
-
-<!-- QUICK ACTIONS -->
-<div class="grid-3 mb-4">
-  <a href="/pay" class="card-sm" style="display:block;text-align:center;border-color:#1e3a5f;transition:.15s" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#1e3a5f'">
-    <div style="font-size:28px;margin-bottom:8px">💳</div>
-    <div style="font-weight:700">Make Payment</div>
-    <div style="font-size:12px;color:var(--muted);margin-top:4px">Pay any merchant</div>
-  </a>
-  <a href="/deposit" class="card-sm" style="display:block;text-align:center;border-color:#1e3a5f;transition:.15s" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#1e3a5f'">
-    <div style="font-size:28px;margin-bottom:8px">💵</div>
-    <div style="font-weight:700">Deposit Money</div>
-    <div style="font-size:12px;color:var(--muted);margin-top:4px">Add funds to account</div>
-  </a>
-  <a href="/report-fraud" class="card-sm" style="display:block;text-align:center;border-color:#1e3a5f;transition:.15s;position:relative" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='#1e3a5f'">
-    <div style="font-size:28px;margin-bottom:8px">🚨</div>
-    <div style="font-weight:700">Report Fraud</div>
-    <div style="font-size:12px;color:var(--muted);margin-top:4px">Get your money back</div>
-    {% if pending_reports > 0 %}
-    <span style="position:absolute;top:12px;right:12px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">{{ pending_reports }}</span>
-    {% endif %}
-  </a>
-</div>
-
-<!-- RECENT TRANSACTIONS -->
-<div class="card">
-  <div class="flex-between mb-4">
-    <h2 style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">Recent Transactions</h2>
-    <a href="/transactions" class="btn btn-ghost btn-sm">View All →</a>
-  </div>
-
-  {% if txns %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>TXN ID</th><th>Date</th><th>Merchant</th><th>Amount</th><th>Status</th><th>Fraud Score</th>
-      </tr></thead>
-      <tbody>
-      {% for t in txns %}
-      {% set is_debit = t.txn_type in ('debit','blocked') %}
-      <tr>
-        <td class="txn-id">{{ t.txn_id }}</td>
-        <td style="color:var(--subtle)">{{ t.timestamp[:16] }}</td>
-        <td>{{ t.merchant or '—' }}</td>
-        <td style="font-weight:700;color:{{ '#ef4444' if is_debit else '#10b981' }}">
-          {{ '-' if is_debit else '+' }}₹{{ "{:,.2f}".format(t.amount) }}
-        </td>
-        <td>
-          {% if t.status == 'success' %}<span class="badge badge-green">✓ Done</span>
-          {% elif t.status == 'flagged' %}<span class="badge badge-yellow">⚠ Flagged</span>
-          {% elif t.status == 'blocked' %}<span class="badge badge-red">🚫 Blocked</span>
-          {% elif t.status == 'reversed' %}<span class="badge badge-blue">↩ Refunded</span>
-          {% elif t.status == 'reversal' %}<span class="badge badge-green">✅ Refund</span>
-          {% else %}<span class="badge badge-gray">{{ t.status }}</span>{% endif %}
-        </td>
-        <td>
-          <div class="score-wrap">
-            <div class="score-bar"><div class="score-fill" style="width:{{ t.fraud_score }}%;background:{{ '#ef4444' if t.fraud_score>=75 else ('#f59e0b' if t.fraud_score>=25 else '#10b981') }}"></div></div>
-            <span style="font-size:12px;color:{{ '#ef4444' if t.fraud_score>=75 else ('#f59e0b' if t.fraud_score>=25 else '#10b981') }}">{{ t.fraud_score }}</span>
-          </div>
-        </td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty">No transactions yet. Make your first payment!</div>
-  {% endif %}
+{% block title %}Dashboard — SafeBank{% endblock %}
+{% block nav_links %}
+<div class="nav-links">
+  <a href="/dashboard" class="nav-link active">Home</a>
+  <a href="/transactions" class="nav-link">Transactions</a>
+  <a href="/pay" class="nav-link">Pay</a>
+  <a href="/deposit" class="nav-link">Deposit</a>
+  <a href="/my-reports" class="nav-link">My Reports{% if pending_reports > 0 %}<span style="background:var(--danger);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:3px;">{{ pending_reports }}</span>{% endif %}</a>
 </div>
 {% endblock %}
+{% block nav_right %}
+<div class="nav-avatar">{{ acc.full_name[0].upper() }}</div>
+<a href="/logout" class="nav-link" style="color:var(--text3);font-size:13px;">Out</a>
+{% endblock %}
 
-{% block scripts %}
-<script>
-// Auto-refresh balance every 10 seconds
-setInterval(async () => {
-  try {
-    const r = await fetch('/api/balance');
-    const d = await r.json();
-    document.getElementById('live-balance').textContent =
-      '₹' + d.balance.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
-  } catch(e) {}
-}, 10000);
-</script>
+{% block body %}
+<div class="page">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}<div class="alerts">
+    {% for cat,msg in messages %}
+    <div class="alert alert-{{ 'error' if cat=='error' else ('success' if cat=='success' else 'info') }}">{{ msg }}</div>
+    {% endfor %}
+  </div>{% endif %}{% endwith %}
+
+  <div style="margin-bottom:24px;">
+    <div style="font-size:13px;color:var(--text3);">Good day,</div>
+    <div style="font-size:22px;font-weight:800;">{{ acc.full_name }} 👋</div>
+  </div>
+
+  <div class="balance-card mb-3">
+    <div class="balance-label">Total Balance</div>
+    <div class="balance-amount">₹{{ "%.2f"|format(acc.balance) }}</div>
+    <div class="balance-acct">Account · {{ acc.account_id }}</div>
+  </div>
+
+  <div class="sec-head"><div class="sec-title">Quick Actions</div></div>
+  <div class="actions-row mb-3">
+    <a href="/pay" class="action-btn">
+      <div class="action-icon" style="background:var(--brand-lt);">💸</div>
+      <div class="action-lbl">Pay</div>
+    </a>
+    <a href="/deposit" class="action-btn">
+      <div class="action-icon" style="background:var(--success-lt);">💰</div>
+      <div class="action-lbl">Deposit</div>
+    </a>
+    <a href="/transactions" class="action-btn">
+      <div class="action-icon" style="background:var(--accent-lt);">📋</div>
+      <div class="action-lbl">History</div>
+    </a>
+    <a href="/report-fraud" class="action-btn">
+      <div class="action-icon" style="background:var(--danger-lt);">🚨</div>
+      <div class="action-lbl">Report</div>
+    </a>
+  </div>
+
+  <div class="sec-head">
+    <div class="sec-title">Recent Transactions</div>
+    <a href="/transactions" class="sec-link">See all →</a>
+  </div>
+  <div class="card card-sm">
+    {% if txns %}
+      {% for t in txns %}
+      <div class="txn-row" onclick='showTxnModal({"txn_id":"{{ t.txn_id }}","merchant":"{{ (t.merchant or t.description or "Transaction")|replace("'","\\'")|replace('"',"") }}","amount":"{{ t.amount }}","balance_after":"{{ t.balance_after }}","type":"{{ t.txn_type }}","status":"{{ t.status }}","location":"{{ t.location or "" }}","timestamp":"{{ t.timestamp }}"})'>
+        <div class="txn-icon" style="background:{{ 'var(--success-lt)' if t.txn_type in ('credit','reversal') else ('var(--danger-lt)' if t.status=='blocked' else 'var(--surface2)') }};">
+          {{ '⬆️' if t.txn_type in ('credit','reversal') else ('🚫' if t.status=='blocked' else '⬇️') }}
+        </div>
+        <div class="txn-info">
+          <div class="txn-name">{{ t.merchant or t.description or 'Transaction' }}</div>
+          <div class="txn-date">{{ t.timestamp[:16] }}</div>
+        </div>
+        <div class="txn-amt {{ 'txn-credit' if t.txn_type in ('credit','reversal') else ('txn-blocked' if t.status=='blocked' else 'txn-debit') }}">
+          {{ '+' if t.txn_type in ('credit','reversal') else '-' }}₹{{ "%.0f"|format(t.amount) }}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="padding:28px;text-align:center;color:var(--text3);font-size:14px;">No transactions yet. <a href="/pay">Make your first payment →</a></div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

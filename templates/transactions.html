@@ -1,83 +1,65 @@
 {% extends "base.html" %}
-{% block title %}Transaction History{% endblock %}
-{% block content %}
-
-<div class="flex-between mb-4">
-  <h1 class="page-title" style="margin-bottom:0">Transaction History</h1>
-  <a href="/report-fraud" class="btn btn-danger btn-sm">🚨 Report Fraud</a>
+{% block title %}Transactions — SafeBank{% endblock %}
+{% block nav_links %}
+<div class="nav-links">
+  <a href="/dashboard" class="nav-link">Home</a>
+  <a href="/transactions" class="nav-link active">Transactions</a>
+  <a href="/pay" class="nav-link">Pay</a>
+  <a href="/deposit" class="nav-link">Deposit</a>
+  <a href="/my-reports" class="nav-link">My Reports</a>
 </div>
+{% endblock %}
+{% block nav_right %}
+<div class="nav-avatar">{{ acc.full_name[0].upper() }}</div>
+<a href="/logout" class="nav-link" style="color:var(--text3);font-size:13px;">Out</a>
+{% endblock %}
 
-<div class="card" style="margin-bottom:16px;padding:16px 20px;background:rgba(37,99,235,.05);border-color:rgba(37,99,235,.3)">
-  <p style="font-size:13px;color:var(--blue3)">
-    💡 <strong>TXN ID</strong> is shown in the first column of every row below.
-    If you see a suspicious transaction, copy its TXN ID and use
-    <a href="/report-fraud" style="color:#fff;text-decoration:underline">Report Fraud</a> to get an instant refund.
-  </p>
-</div>
+{% block body %}
+<div class="page">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+    <a href="/dashboard" class="back-btn">← Back</a>
+    <div>
+      <div style="font-size:22px;font-weight:800;">Transaction History</div>
+      <div style="font-size:13px;color:var(--text3);">{{ txns|length }} transactions · tap any row for details</div>
+    </div>
+  </div>
 
-{% if txns %}
-<div class="table-wrap">
-  <table>
-    <thead><tr>
-      <th>TXN ID</th>
-      <th>Date & Time</th>
-      <th>Type</th>
-      <th>Merchant</th>
-      <th>Location</th>
-      <th>Amount</th>
-      <th>Balance After</th>
-      <th>Status</th>
-      <th>Fraud Score</th>
-      <th>Action</th>
-    </tr></thead>
-    <tbody>
-    {% for t in txns %}
-    {% set is_debit = t.txn_type in ('debit','blocked') %}
-    <tr>
-      <td>
-        <span class="txn-id" title="Click to copy" style="cursor:pointer" onclick="navigator.clipboard.writeText('{{ t.txn_id }}');this.style.color='#10b981';setTimeout(()=>this.style.color='',1500)">
-          {{ t.txn_id }}
-          <span style="font-size:10px;opacity:.5">⧉</span>
-        </span>
-      </td>
-      <td style="color:var(--subtle);white-space:nowrap">{{ t.timestamp[:16] }}</td>
-      <td>
-        {% if t.txn_type == 'debit' %}<span class="badge badge-red">💸 Debit</span>
-        {% elif t.txn_type == 'credit' %}<span class="badge badge-green">💰 Credit</span>
-        {% elif t.txn_type == 'reversal' %}<span class="badge badge-blue">↩ Reversal</span>
-        {% else %}<span class="badge badge-gray">{{ t.txn_type }}</span>{% endif %}
-      </td>
-      <td style="font-weight:500">{{ t.merchant or '—' }}</td>
-      <td style="color:var(--subtle)">{{ t.location or '—' }}</td>
-      <td style="font-weight:700;color:{{ '#ef4444' if is_debit else '#10b981' }}">
-        {{ '-' if is_debit else '+' }}₹{{ "{:,.2f}".format(t.amount) }}
-      </td>
-      <td class="mono" style="color:var(--subtle)">₹{{ "{:,.2f}".format(t.balance_after) }}</td>
-      <td>
-        {% if t.status == 'success' %}<span class="badge badge-green">✓ Done</span>
-        {% elif t.status == 'flagged' %}<span class="badge badge-yellow">⚠ Flagged</span>
-        {% elif t.status == 'blocked' %}<span class="badge badge-red">🚫 Blocked</span>
-        {% elif t.status == 'reversed' %}<span class="badge badge-blue">↩ Refunded</span>
-        {% elif t.status == 'reversal' %}<span class="badge badge-green">✅ Refund</span>
-        {% else %}<span class="badge badge-gray">{{ t.status }}</span>{% endif %}
-      </td>
-      <td>
-        <div class="score-wrap">
-          <div class="score-bar"><div class="score-fill" style="width:{{ t.fraud_score }}%;background:{{ '#ef4444' if t.fraud_score>=75 else ('#f59e0b' if t.fraud_score>=25 else '#10b981') }}"></div></div>
-          <span style="font-size:12px;font-weight:600;color:{{ '#ef4444' if t.fraud_score>=75 else ('#f59e0b' if t.fraud_score>=25 else '#10b981') }}">{{ t.fraud_score }}/100</span>
-        </div>
-      </td>
-      <td>
-        {% if t.txn_type == 'debit' and t.status not in ('reversed',) %}
-        <a href="/report-fraud?txn_id={{ t.txn_id }}" class="btn btn-danger btn-sm">🚨 Report</a>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Type</th><th>Merchant</th><th>Amount</th>
+        <th>Balance after</th><th>Status</th><th>Date & Time</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for t in txns %}
+      <tr style="cursor:pointer;"
+          onclick='showTxnModal({"txn_id":"{{ t.txn_id }}","merchant":"{{ (t.merchant or t.description or "Transaction")|replace("'","\\'")|replace('"',"") }}","amount":"{{ t.amount }}","balance_after":"{{ t.balance_after }}","type":"{{ t.txn_type }}","status":"{{ t.status }}","location":"{{ t.location or "" }}","timestamp":"{{ t.timestamp }}"})'>
+        <td>
+          <span class="badge {{ 'badge-success' if t.txn_type in ('credit','reversal') else ('badge-danger' if t.status=='blocked' else 'badge-gray') }}">
+            {{ t.txn_type }}
+          </span>
+        </td>
+        <td style="font-weight:500;">{{ t.merchant or '—' }}</td>
+        <td style="font-weight:700;" class="{{ 'text-success' if t.txn_type in ('credit','reversal') else ('text-danger' if t.status=='blocked' else '') }}">
+          {{ '+' if t.txn_type in ('credit','reversal') else '-' }}₹{{ "%.2f"|format(t.amount) }}
+        </td>
+        <td>₹{{ "%.2f"|format(t.balance_after) }}</td>
+        <td>
+          <span class="badge {{ 'badge-success' if t.status=='success' else ('badge-danger' if t.status in ('blocked','flagged') else ('badge-info' if t.status=='reversed' else 'badge-gray')) }}">{{ t.status }}</span>
+          {% if t.fraud_score >= 25 %}<span class="badge badge-warn" style="margin-left:3px;">⚠ {{ t.fraud_score }}</span>{% endif %}
+        </td>
+        <td class="text-xs">{{ t.timestamp[:16] }}</td>
+        <td onclick="event.stopPropagation()">
+          {% if t.status not in ('reversed',) %}
+          <a href="/report-fraud?txn={{ t.txn_id }}" class="btn btn-sm btn-ghost" style="color:var(--danger);" title="Report this transaction">🚨</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="text-align:center;padding:36px;color:var(--text3);">No transactions yet</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
-{% else %}
-<div class="card empty">No transactions yet.</div>
-{% endif %}
 {% endblock %}

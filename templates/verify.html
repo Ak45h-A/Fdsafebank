@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Identity Verification — SafeBank</title>
+<style>
+:root{--bg:#080B14;--surface:#0F1220;--surface2:#161B2E;--border:#252B45;
+      --text:#E2E8FF;--text2:#8892BC;--text3:#4A5280;
+      --brand:#6366F1;--brand-dk:#818CF8;--brand-lt:#1E2050;
+      --danger:#F87171;--danger-lt:#2D0B0B;
+      --warn:#FCD34D;--warn-lt:#2D2007;
+      --success:#10B981;--success-lt:#052018;
+      --radius:12px;--shadow:0 4px 24px rgba(0,0,0,.6);}
+[data-theme="light"]{
+  --bg:#F1F5FF;--surface:#fff;--surface2:#EEF2FF;--border:#DDE3F5;
+  --text:#0F1230;--text2:#4A5280;--text3:#8892BC;
+  --brand:#4F46E5;--brand-dk:#3730A3;--brand-lt:#EEF2FF;
+  --danger:#DC2626;--danger-lt:#FEE2E2;
+  --warn:#D97706;--warn-lt:#FEF3C7;
+  --success:#059669;--success-lt:#D1FAE5;
+  --shadow:0 2px 12px rgba(0,0,0,.08);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+     background:var(--bg);color:var(--text);min-height:100vh;
+     display:flex;flex-direction:column;align-items:center;padding:28px 16px;}
+.wrap{width:100%;max-width:560px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:36px;height:36px;border-radius:10px;
+           background:linear-gradient(135deg,#6366F1,#A78BFA);
+           display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px;}
+.logo-name{font-weight:900;font-size:17px;}
+.theme-btn{width:32px;height:32px;border-radius:7px;border:1px solid var(--border);
+           background:var(--surface2);cursor:pointer;font-size:14px;
+           display:flex;align-items:center;justify-content:center;}
+.card{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:14px;}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;
+       font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;}
+.badge-warn{background:var(--warn-lt);color:var(--warn);}
+.badge-success{background:var(--success-lt);color:var(--success);}
+.badge-danger{background:var(--danger-lt);color:var(--danger);}
+.badge-gray{background:var(--surface2);color:var(--text3);}
+.form-group{margin-bottom:14px;}
+.form-label{display:block;font-size:11px;font-weight:800;color:var(--text3);
+            margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em;}
+.form-input{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:8px;
+            background:var(--surface2);color:var(--text);font-size:14px;outline:none;
+            transition:.15s;font-family:inherit;}
+.form-input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(99,102,241,.15);}
+.form-input::placeholder{color:var(--text3);}
+.form-select{appearance:none;}
+.form-hint{font-size:11px;color:var(--text3);margin-top:5px;line-height:1.5;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px 18px;
+     border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;
+     transition:.15s;width:100%;text-decoration:none;}
+.btn-primary{background:linear-gradient(135deg,#6366F1,#A78BFA);color:#fff;}
+.btn-primary:hover{opacity:.9;}
+.btn-danger{background:var(--danger);color:#fff;}.btn-danger:hover{opacity:.88;}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--brand-lt);color:var(--brand-dk);}
+.btn-video{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;}
+.info-row{display:flex;justify-content:space-between;align-items:center;
+          padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.info-row:last-child{border-bottom:none;}
+.info-lbl{color:var(--text3);font-size:12px;}
+.info-val{font-weight:600;}
+.countdown-big{font-size:40px;font-weight:900;font-variant-numeric:tabular-nums;
+               text-align:center;letter-spacing:-1px;margin:6px 0;line-height:1;}
+.countdown-big.ok{color:var(--success);}
+.countdown-big.warning{color:var(--warn);}
+.countdown-big.urgent{color:var(--danger);animation:pulse-r 1s infinite;}
+@keyframes pulse-r{0%,100%{opacity:1}50%{opacity:.5}}
+.alert{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;border-left:2px solid;line-height:1.6;}
+.alert-danger{background:var(--danger-lt);color:var(--danger);border-color:var(--danger);}
+.alert-success{background:var(--success-lt);color:var(--success);border-color:var(--success);}
+.alert-warn{background:var(--warn-lt);color:var(--warn);border-color:var(--warn);}
+.steps{display:flex;gap:6px;margin:14px 0;}
+.step{flex:1;height:3px;border-radius:2px;background:var(--border);transition:.3s;}
+.step.done{background:var(--success);}.step.active{background:var(--brand-dk);}
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:22px;
+             text-align:center;transition:.2s;cursor:pointer;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--brand-dk);background:var(--brand-lt);}
+.upload-zone.has-file{border-color:var(--success);background:var(--success-lt);}
+.upload-icon{font-size:32px;margin-bottom:8px;}
+.upload-text{font-size:13px;font-weight:600;color:var(--text2);}
+.upload-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.resolved-wrap{text-align:center;padding:40px 20px;}
+.resolved-icon{font-size:52px;margin-bottom:14px;}
+.step-num{width:26px;height:26px;border-radius:50%;flex-shrink:0;
+          display:flex;align-items:center;justify-content:center;
+          font-weight:900;font-size:12px;background:var(--brand-lt);color:var(--brand-dk);}
+@media(max-width:480px){.countdown-big{font-size:30px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-bar">
+    <div class="logo">
+      <div class="logo-mark">A</div>
+      <span class="logo-name">SafeBank</span>
+    </div>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">☀️</button>
+  </div>
+
+  {% if error %}
+  <div class="card"><div class="resolved-wrap">
+    <div class="resolved-icon">⚠️</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:8px;">Link Invalid or Expired</div>
+    <div style="font-size:13px;color:var(--text3);">{{ error }}</div>
+  </div></div>
+
+  {% elif ver.status in ('approved',) %}
+  <div class="card"><div class="resolved-wrap">
+    <div class="resolved-icon">✅</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:8px;">Identity Verified</div>
+    <div style="font-size:13px;color:var(--text3);">Your identity was verified. The transaction has been cleared by SafeBank.</div>
+  </div></div>
+
+  {% elif ver.status == 'auto_refunded' %}
+  <div class="card"><div class="resolved-wrap">
+    <div class="resolved-icon">💸</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:8px;">Auto-Refund Processed</div>
+    <div style="font-size:13px;color:var(--text3);">The deadline passed without verification. The amount has been refunded to the reporter.</div>
+  </div></div>
+
+  {% elif ver.status == 'rejected' %}
+  <div class="card"><div class="resolved-wrap">
+    <div class="resolved-icon">❌</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:8px;">Verification Rejected</div>
+    <div style="font-size:13px;color:var(--text3);">Your document was rejected by SafeBank. The amount has been refunded to the reporter.</div>
+  </div></div>
+
+  {% else %}
+  <!-- ═══ ACTIVE VERIFICATION ═══ -->
+
+  <!-- Countdown card -->
+  <div class="card" style="border-color:var(--warn);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;margin-bottom:5px;">Identity Verification Required</div>
+        <span class="badge badge-warn">🔔 {{ ver.status.replace('_',' ').title() }}</span>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Time Remaining</div>
+        <div class="countdown-big ok" id="big-countdown">--:--</div>
+      </div>
+    </div>
+
+    <!-- Step progress -->
+    <div class="steps">
+      <div class="step done"></div>
+      <div class="step {{ 'done' if ver.status == 'document_uploaded' else ('active' if ver.status == 'video_requested' else '') }}"></div>
+      <div class="step {{ 'active' if ver.status == 'video_requested' else '' }}"></div>
+    </div>
+
+    <div class="alert alert-danger">
+      <strong>⚠️ Action Required:</strong> A fraud claim was filed against a payment you received.
+      You must verify your identity within <strong>1 hour</strong> or the amount will be
+      <strong>automatically refunded</strong> to the reporter and you will be flagged as a fraud source.
+    </div>
+
+    <div style="margin-bottom:3px;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;">Transaction in Question</div>
+    <div class="info-row"><span class="info-lbl">Merchant / Your name</span><span class="info-val">{{ ver.merchant }}</span></div>
+    <div class="info-row"><span class="info-lbl">Amount at risk</span>
+      <span class="info-val" style="color:var(--danger);font-size:16px;">₹{{ "%.2f"|format(ver.amount) }}</span></div>
+    <div class="info-row"><span class="info-lbl">Reported reason</span>
+      <span class="info-val" style="font-size:12px;">{{ ver.report_reason or '—' }}</span></div>
+    <div class="info-row"><span class="info-lbl">Deadline</span>
+      <span class="info-val" style="font-family:monospace;font-size:11px;">{{ ver.deadline_at }}</span></div>
+  </div>
+
+  {% if result %}
+  <div class="alert {{ 'alert-success' if result.success else 'alert-danger' }}">
+    {{ result.message if result.success else result.error }}
+    {% if result.success and result.meet_link is defined and result.meet_link %}
+    <div style="margin-top:8px;">
+      <a href="{{ result.meet_link }}" target="_blank"
+         style="display:inline-block;padding:8px 16px;background:linear-gradient(135deg,#4f46e5,#7c3aed);
+                color:#fff;border-radius:7px;font-weight:700;text-decoration:none;font-size:13px;">
+        📹 Join Video Call Now →
+      </a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ═══ OPTION 1: DOCUMENT UPLOAD ═══ -->
+  {% if ver.status in ('pending', 'video_requested') %}
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div class="step-num">1</div>
+      <div>
+        <div style="font-size:14px;font-weight:800;">Submit Government ID Document</div>
+        <div style="font-size:11px;color:var(--text3);">PAN, Aadhaar, Passport, Voter ID, Driving Licence</div>
+      </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Document type</label>
+        <select name="document_type" class="form-input form-select" required id="doc-type">
+          <option value="">— Select document —</option>
+          <option value="PAN Card">PAN Card</option>
+          <option value="Aadhaar Card">Aadhaar Card</option>
+          <option value="Passport">Passport</option>
+          <option value="Voter ID">Voter ID</option>
+          <option value="Driving Licence">Driving Licence</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Document number</label>
+        <input type="text" name="document_number" class="form-input"
+               id="doc-number" placeholder="e.g. ABCDE1234F"
+               style="font-family:monospace;letter-spacing:1px;text-transform:uppercase;" required/>
+        <div class="form-hint">Enter the number exactly as printed on your document.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Upload document photo <span style="color:var(--danger);">*</span></label>
+        <div class="upload-zone" id="upload-zone"
+             onclick="document.getElementById('document_file').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="event.preventDefault();this.classList.remove('drag');handleFile({files:event.dataTransfer.files})">
+          <div class="upload-icon" id="upload-icon">📎</div>
+          <div class="upload-text" id="upload-text">Tap to upload or drag & drop</div>
+          <div class="upload-sub" id="upload-sub">JPG, PNG, PDF · Max 10MB · Must be clearly legible</div>
+        </div>
+        <input type="file" id="document_file" name="document_file"
+               accept="image/*,.pdf" style="display:none;" required
+               onchange="handleFile(this)"/>
+        <div class="form-hint" style="margin-top:6px;">
+          📸 Ensure all text is readable, not blurry or cut off. Blurry or cropped images will be rejected.
+        </div>
+      </div>
+
+      <input type="hidden" name="action" value="upload_document"/>
+      <button type="submit" class="btn btn-primary" id="submit-btn" onclick="return validateDoc()">
+        📤 Submit for Verification
+      </button>
+    </form>
+  </div>
+
+  {% elif ver.status == 'document_uploaded' %}
+  <div class="card" style="border-color:var(--success);">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="font-size:32px;">✅</div>
+      <div>
+        <div style="font-weight:800;color:var(--success);font-size:14px;">Document Submitted Successfully</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px;">
+          <strong>{{ ver.document_type }}</strong> — {{ ver.document_name }}<br/>
+          Our team is reviewing your document. You'll be notified of the outcome.
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══ OPTION 2: VIDEO CALL ═══ -->
+  {% if ver.status not in ('document_uploaded',) %}
+  <div class="card" style="background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(167,139,250,.04));border-color:rgba(99,102,241,.25);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div class="step-num" style="background:var(--purple-lt,#1E1440);color:#A78BFA;">2</div>
+      <div>
+        <div style="font-size:14px;font-weight:800;">Video Call with Bank Officer</div>
+        <div style="font-size:11px;color:var(--text3);">Alternative if you can't upload a document right now</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">
+      Request a live video call. A SafeBank officer will verify your identity in real time.
+      {% if ver.video_requested %}
+      <br/><strong style="color:#A78BFA;">✓ Video call already requested.</strong>
+      {% endif %}
+    </div>
+
+    {% if ver.video_requested %}
+    <a href="https://meet.jit.si/SafeBank-Verify-{{ ver.verification_id[:8] }}" target="_blank"
+       class="btn btn-video">📹 Join Video Call</a>
+    <div style="margin-top:10px;padding:10px 12px;background:rgba(99,102,241,.1);border-radius:7px;font-size:11px;">
+      <strong>Call link:</strong>
+      <a href="https://meet.jit.si/SafeBank-Verify-{{ ver.verification_id[:8] }}" target="_blank"
+         style="color:#818CF8;word-break:break-all;">
+        https://meet.jit.si/SafeBank-Verify-{{ ver.verification_id[:8] }}
+      </a>
+    </div>
+    {% else %}
+    <form method="POST">
+      <input type="hidden" name="action" value="request_video"/>
+      <button type="submit" class="btn btn-ghost">📹 Request Video Call</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div style="text-align:center;font-size:11px;color:var(--text3);padding:12px 8px;line-height:1.7;">
+    If the deadline passes without successful verification,<br/>
+    <strong style="color:var(--danger);">₹{{ "%.2f"|format(ver.amount) }}</strong>
+    will be auto-refunded and your account flagged.
+  </div>
+
+  {% endif %}
+</div>
+
+<script>
+(function(){
+  const s=localStorage.getItem('sb-verify-theme')||'dark';
+  document.documentElement.setAttribute('data-theme',s);
+  document.getElementById('theme-btn').textContent=s==='dark'?'☀️':'🌙';
+})();
+function toggleTheme(){
+  const c=document.documentElement.getAttribute('data-theme');
+  const n=c==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  localStorage.setItem('sb-verify-theme',n);
+  document.getElementById('theme-btn').textContent=n==='dark'?'☀️':'🌙';
+}
+
+{% if ver and ver.deadline_at and ver.status not in ('approved','rejected','auto_refunded') %}
+(function(){
+  const deadline=new Date("{{ ver.deadline_at }}");
+  const el=document.getElementById('big-countdown');
+  function tick(){
+    if(!el) return;
+    const diff=deadline-new Date();
+    if(diff<=0){
+      el.textContent='EXPIRED';el.className='countdown-big urgent';
+      setTimeout(()=>location.reload(),3000);
+      return;
+    }
+    const m=Math.floor(diff/60000),s=Math.floor((diff%60000)/1000);
+    el.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    el.className='countdown-big '+(diff<180000?'urgent':diff<600000?'warning':'ok');
+  }
+  tick();setInterval(tick,1000);
+})();
+{% endif %}
+
+function handleFile(inp){
+  const files = inp.files || inp;
+  if(!files||!files[0]) return;
+  const f=files[0];
+  if(f.size>10*1024*1024){alert('File is too large. Maximum size is 10MB.');return;}
+  const allowed=['image/jpeg','image/png','image/gif','image/webp','application/pdf','image/bmp'];
+  if(!allowed.includes(f.type)){alert('Invalid file type. Please use JPG, PNG, PDF, or GIF.');return;}
+  document.getElementById('upload-icon').textContent='✅';
+  document.getElementById('upload-text').textContent=f.name;
+  document.getElementById('upload-sub').textContent=(f.size/1024).toFixed(0)+'KB · Ready to submit';
+  const zone=document.getElementById('upload-zone');
+  if(zone){zone.classList.add('has-file');zone.classList.remove('drag');}
+}
+
+function validateDoc(){
+  const type=document.getElementById('doc-type')?.value;
+  const num=document.getElementById('doc-number')?.value?.trim();
+  const file=document.getElementById('document_file')?.files?.[0];
+  if(!type){alert('Please select a document type.');return false;}
+  if(!num||num.length<4){alert('Please enter a valid document number.');return false;}
+  if(!file){alert('Please upload a photo of your document.\n\nThis is required for verification.');return false;}
+  document.getElementById('submit-btn').textContent='Uploading...';
+  document.getElementById('submit-btn').disabled=true;
+  return true;
+}
+
+const numInp=document.getElementById('doc-number');
+if(numInp) numInp.addEventListener('input',function(){this.value=this.value.toUpperCase();});
+</script>
+</body>
+</html>

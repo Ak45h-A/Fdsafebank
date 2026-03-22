@@ -1,4 +1,10 @@
-safebank_web.db
 __pycache__/
 *.pyc
+*.pyo
 .env
+safebank_web.db
+safebank.db
+static/uploads/*
+!static/uploads/.gitkeep
+venv/
+.venv/
