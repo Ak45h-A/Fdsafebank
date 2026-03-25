@@ -1,64 +1,324 @@
 {% extends "base.html" %}
-{% block title %}Login — SafeBank{% endblock %}
+{% block title %}Sign In — SafeBank{% endblock %}
 {% block nav_bar %}{% endblock %}
+{% block bottom_nav %}{% endblock %}
 {% block body %}
-<div class="auth-wrap">
-  <div class="auth-card">
-    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn"
-            style="position:absolute;top:16px;right:16px;">🌙</button>
 
-    <div class="auth-logo">
-      <div class="auth-logo-mark">A</div>
+<style>
+/* ── Premium Login Overrides ── */
+html,body{height:100%;overflow:hidden;}
+@media(max-width:767px){html,body{overflow:auto;}}
+
+.login-wrap{
+  min-height:100vh;display:flex;
+  background:var(--bg);
+}
+
+/* LEFT PANEL — Brand */
+.login-left{
+  flex:0 0 48%;
+  background:linear-gradient(135deg,#1e1b4b 0%,#312e81 35%,#4338CA 65%,#6D28D9 100%);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:60px 48px;
+  position:relative;overflow:hidden;
+}
+.login-left::before{
+  content:'';position:absolute;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(165,180,252,.12) 0%,transparent 65%);
+  top:-200px;right:-200px;
+}
+.login-left::after{
+  content:'';position:absolute;
+  width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(196,181,253,.1) 0%,transparent 65%);
+  bottom:-150px;left:-100px;
+}
+/* Animated orbs */
+.orb{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,.04);
+  animation:orb-float ease-in-out infinite alternate;
+}
+.orb-1{width:180px;height:180px;top:10%;left:5%;animation-duration:7s;}
+.orb-2{width:120px;height:120px;bottom:20%;right:8%;animation-duration:9s;animation-delay:2s;}
+.orb-3{width:80px;height:80px;top:55%;left:55%;animation-duration:6s;animation-delay:1s;}
+@keyframes orb-float{
+  from{transform:translateY(0) scale(1);}
+  to{transform:translateY(-20px) scale(1.05);}
+}
+/* Grid pattern overlay */
+.login-left-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.login-brand{
+  position:relative;z-index:2;
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:52px;
+}
+.login-brand-logo{
+  width:52px;height:52px;border-radius:16px;
+  background:rgba(255,255,255,.18);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.25);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 32px rgba(0,0,0,.2);
+}
+.login-brand-logo svg{width:26px;height:26px;}
+.login-brand-name{
+  font-size:22px;font-weight:800;color:#fff;
+  letter-spacing:-.03em;
+}
+.login-brand-tag{
+  font-size:11px;color:rgba(255,255,255,.5);
+  font-weight:500;letter-spacing:.04em;
+}
+.login-headline{
+  position:relative;z-index:2;
+  font-size:clamp(28px,3vw,38px);
+  font-weight:800;color:#fff;
+  letter-spacing:-.03em;line-height:1.2;
+  margin-bottom:16px;
+}
+.login-sub{
+  position:relative;z-index:2;
+  font-size:16px;color:rgba(255,255,255,.6);
+  line-height:1.7;margin-bottom:44px;
+  max-width:360px;
+}
+.login-features{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;gap:16px;
+  width:100%;max-width:360px;
+}
+.login-feature{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;border-radius:12px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(4px);
+}
+.login-feature-icon{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.login-feature-icon svg{width:18px;height:18px;}
+.login-feature-text{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);}
+.login-feature-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:1px;}
+
+/* RIGHT PANEL — Form */
+.login-right{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:40px 32px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.login-form-card{
+  width:100%;max-width:420px;
+}
+.login-form-header{margin-bottom:32px;}
+.login-form-title{
+  font-size:28px;font-weight:800;color:var(--text);
+  letter-spacing:-.03em;margin-bottom:6px;
+}
+.login-form-sub{font-size:14px;color:var(--text3);}
+.login-form-sub a{color:var(--brand);font-weight:600;}
+
+/* Theme toggle btn floating */
+.login-theme-btn{
+  position:fixed;top:18px;right:18px;z-index:100;
+  width:38px;height:38px;border-radius:50%;
+  border:1.5px solid var(--border);
+  background:var(--surface);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow);color:var(--text2);
+  transition:var(--transition);
+}
+.login-theme-btn svg{width:18px;height:18px;}
+.login-theme-btn:hover{background:var(--brand-lt);border-color:var(--brand);color:var(--brand);}
+
+/* Enhanced form elements */
+.login-form-card .form-input{
+  padding:14px 16px;font-size:15px;
+  background:var(--surface);
+  border-color:var(--border);
+}
+.login-form-card .form-input:focus{
+  border-color:var(--brand);
+  box-shadow:0 0 0 4px var(--brand-glow);
+  background:var(--surface);
+}
+.login-divider{
+  display:flex;align-items:center;gap:12px;
+  margin:22px 0;
+}
+.login-divider::before,.login-divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+.login-divider span{font-size:12px;color:var(--text3);font-weight:500;white-space:nowrap;}
+
+/* Sign-in button */
+.btn-signin{
+  width:100%;padding:15px;font-size:15px;font-weight:700;
+  background:linear-gradient(135deg,#4F46E5,#6D28D9);
+  color:#fff;border:none;border-radius:var(--radius-sm);
+  cursor:pointer;transition:var(--transition);
+  box-shadow:0 4px 20px rgba(79,70,229,.38);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  letter-spacing:-.01em;
+}
+.btn-signin svg{width:18px;height:18px;}
+.btn-signin:hover{
+  box-shadow:0 6px 28px rgba(79,70,229,.55);
+  transform:translateY(-1px);
+}
+.btn-signin:active{transform:translateY(0);}
+
+/* ── MOBILE ── */
+@media(max-width:767px){
+  html,body{overflow:auto;}
+  .login-left{display:none;}
+  .login-right{padding:40px 24px 60px;min-height:100vh;}
+  .login-theme-btn{top:14px;right:14px;}
+}
+</style>
+
+<button class="login-theme-btn" onclick="toggleTheme()" id="login-theme-btn" aria-label="Toggle theme">
+  <svg id="lth-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  <svg id="lth-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+</button>
+
+<div class="login-wrap">
+  <!-- LEFT: Brand Panel -->
+  <div class="login-left">
+    <div class="login-left-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="login-brand">
+      <div class="login-brand-logo">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M9 22V12h6v10" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
       <div>
-        <div style="font-weight:900;font-size:20px;color:var(--text);">SafeBank</div>
-        <div style="font-size:11px;color:var(--text3);">Customer Portal</div>
+        <div class="login-brand-name">SafeBank</div>
+        <div class="login-brand-tag">Customer Portal</div>
       </div>
     </div>
-    <div class="auth-title">Welcome back</div>
-    <div class="auth-sub">Sign in to your account</div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}<div class="alerts">
-      {% for cat,msg in messages %}
-      <div class="alert alert-{{ 'error' if cat=='error' else ('success' if cat=='success' else 'info') }}">{{ msg }}</div>
-      {% endfor %}
-    </div>{% endif %}{% endwith %}
+    <h1 class="login-headline">Banking built<br/>for the modern era</h1>
+    <p class="login-sub">Secure transactions, real-time fraud detection, and instant money transfers — all in one place.</p>
 
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <div class="form-group">
-        <label class="form-label">Email address</label>
-        <input type="email" name="email" class="form-input" placeholder="you@example.com" required autofocus/>
-      </div>
-      <div class="form-group">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <label class="form-label" style="margin:0;">Password</label>
-          <a href="/forgot-password" style="font-size:12px;color:var(--brand);font-weight:600;">Forgot?</a>
+    <div class="login-features">
+      <div class="login-feature">
+        <div class="login-feature-icon" style="background:rgba(129,140,248,.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
-        <div class="pw-wrap">
-          <input type="password" name="password" class="form-input" placeholder="••••••••" required/>
-          <button type="button" class="pw-eye" onclick="togglePw(this)">👁</button>
+        <div>
+          <div class="login-feature-text">Fraud Detection</div>
+          <div class="login-feature-sub">AI-powered transaction scoring</div>
         </div>
       </div>
-      <button type="submit" class="btn btn-primary btn-full" style="margin-top:6px;padding:14px;">
-        Sign In
-      </button>
-    </form>
-
-    <div style="text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
-      <span style="font-size:14px;color:var(--text3);">New to SafeBank?</span>
-      <a href="/register" style="font-size:14px;font-weight:700;color:var(--brand);margin-left:6px;">Create account →</a>
+      <div class="login-feature">
+        <div class="login-feature-icon" style="background:rgba(52,211,153,.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div>
+          <div class="login-feature-text">Instant Transfers</div>
+          <div class="login-feature-sub">Send money in seconds</div>
+        </div>
+      </div>
+      <div class="login-feature">
+        <div class="login-feature-icon" style="background:rgba(251,191,36,.2);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        </div>
+        <div>
+          <div class="login-feature-text">Smart Analytics</div>
+          <div class="login-feature-sub">Track your spending patterns</div>
+        </div>
+      </div>
     </div>
-    <div style="text-align:center;margin-top:10px;">
-      <a href="/admin/login" style="font-size:11px;color:var(--text3);">Admin portal</a>
+  </div>
+
+  <!-- RIGHT: Form -->
+  <div class="login-right">
+    <div class="login-form-card">
+      <div class="login-form-header">
+        <!-- Mobile-only brand -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;" class="mobile-brand">
+          <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M9 22V12h6v10" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span style="font-weight:800;font-size:18px;letter-spacing:-.02em;">SafeBank</span>
+        </div>
+        <div class="login-form-title">Welcome back</div>
+        <div class="login-form-sub">
+          Sign in to your account ·
+          <a href="/register">Create one →</a>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="alerts">
+        {% for cat,msg in messages %}
+        <div class="alert alert-{{ 'error' if cat=='error' else ('success' if cat=='success' else 'info') }}">{{ msg }}</div>
+        {% endfor %}
+      </div>{% endif %}{% endwith %}
+
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="form-group">
+          <label class="form-label">Email address</label>
+          <input type="email" name="email" class="form-input" placeholder="you@example.com" required autofocus autocomplete="email"/>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+            <label class="form-label" style="margin:0;">Password</label>
+            <a href="/forgot-password" style="font-size:12px;color:var(--brand);font-weight:600;">Forgot password?</a>
+          </div>
+          <div class="pw-wrap">
+            <input type="password" name="password" class="form-input" placeholder="Enter your password" required autocomplete="current-password"/>
+            <button type="button" class="pw-eye" onclick="togglePw(this)" aria-label="Show password">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-signin" style="margin-top:24px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+          Sign In to SafeBank
+        </button>
+      </form>
+
+      <div style="text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text3);">Admin?</span>
+        <a href="/admin/login" style="font-size:13px;color:var(--text2);font-weight:600;margin-left:6px;">Admin Portal →</a>
+      </div>
     </div>
   </div>
 </div>
+
 <script>
 (function(){
   const s=localStorage.getItem('sb-user-theme')||'light';
   document.documentElement.setAttribute('data-theme',s);
-  document.getElementById('theme-btn').textContent=s==='dark'?'☀️':'🌙';
+  const sun=document.getElementById('lth-sun');
+  const moon=document.getElementById('lth-moon');
+  if(sun)sun.style.display=s==='dark'?'block':'none';
+  if(moon)moon.style.display=s==='dark'?'none':'block';
 })();
+// Sync the existing toggleTheme to also update login icons
+const _origToggle=window.toggleTheme;
+window.toggleTheme=function(){
+  _origToggle&&_origToggle();
+  const s=document.documentElement.getAttribute('data-theme');
+  const sun=document.getElementById('lth-sun');
+  const moon=document.getElementById('lth-moon');
+  if(sun)sun.style.display=s==='dark'?'block':'none';
+  if(moon)moon.style.display=s==='dark'?'none':'block';
+};
 </script>
 {% endblock %}
